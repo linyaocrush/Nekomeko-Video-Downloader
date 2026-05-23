@@ -153,7 +153,10 @@ class ThemeEditorWindow(ctk.CTkToplevel):
             self._theme_manager.set_active_theme_record(target_name)
             if messagebox.askyesno("保存成功", f"主题 '{target_name}' 已保存！\n需要重启生效，立即重启？"):
                 from ..core.process import popen_text
-                popen_text([sys.executable, "-m", "neko.main"], cwd=os.getcwd())
+                if getattr(sys, 'frozen', False):
+                    popen_text([sys.executable], cwd=os.getcwd())
+                else:
+                    popen_text([sys.executable, "-m", "neko.main"], cwd=os.getcwd())
                 sys.exit(0)
             else:
                 self.destroy()
