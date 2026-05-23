@@ -332,7 +332,10 @@ class NekoDownloader(DownloadMixin, QueueMixin, ResumeMixin, UIHelpersMixin, ctk
         ctk.CTkLabel(r1, text="😾 广告处理", font=FONT_N, width=90, anchor="w", text_color=_c.CURRENT_THEME["text"]).grid(row=0, column=0, sticky="w")
         self.c_sponsor_action = ctk.CTkComboBox(r1, values=["🙈 Off", "🔖 Mark", "✂️ Remove"], font=FONT_N, width=130, command=self.on_sponsor_action_change, text_color=_c.CURRENT_THEME["text"], fg_color=_c.CURRENT_THEME["panel_bg"])
         self.c_sponsor_action.grid(row=0, column=1, sticky="w", padx=(5, 15))
-        self.c_sponsor_action.set(self.cfg["sponsor_action"])
+        # Migrate old config values to new short form
+        _sa = self.cfg["sponsor_action"]
+        _sa_map = {"🙈 视而不见 (Off)": "🙈 Off", "🔖 做个记号 (Mark)": "🔖 Mark", "✂️ 咬掉扔了 (Remove)": "✂️ Remove"}
+        self.c_sponsor_action.set(_sa_map.get(_sa, _sa))
         self.l_sb_cats = ctk.CTkLabel(r1, text="", font=FONT_S, text_color=_c.CURRENT_THEME["accent"])
         self.l_sb_cats.grid(row=0, column=1, sticky="e")
         ctk.CTkLabel(r1, text="🍪 Cookie", font=FONT_N, width=70, anchor="w", text_color=_c.CURRENT_THEME["text"]).grid(row=0, column=2, sticky="w")
@@ -387,7 +390,7 @@ class NekoDownloader(DownloadMixin, QueueMixin, ResumeMixin, UIHelpersMixin, ctk
             self.proxy_box.pack_forget()
 
         # Row 5: Time switch + inputs (inline) + Concurrency
-        r5 = ctk.CTkFrame(self.adv_frame, fg_color="transparent")
+        self._adv_r5 = r5 = ctk.CTkFrame(self.adv_frame, fg_color="transparent")
         r5.pack(fill="x", padx=10, pady=3)
         self.switch_time = ctk.CTkSwitch(r5, text="✂️ 片段下载", font=FONT_N, progress_color=_c.CURRENT_THEME["accent"], text_color=_c.CURRENT_THEME["text"], command=self.upd_ui)
         self.switch_time.pack(side="left")

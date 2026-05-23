@@ -35,7 +35,7 @@ class UIHelpersMixin:
         m = self.seg_mode.get()
         self.sw_embed.configure(state="normal" if "最佳" in m or "手动" in m else "disabled")
         if "手动" in m or "字幕" in m:
-            self.fmt_frame.pack(after=self.preview_frame, fill="x", padx=20, pady=10)
+            self.fmt_frame.pack(after=self.seg_mode, fill="x", padx=20, pady=10)
             st = "normal" if self.current_meta else "disabled"
 
             if "字幕" in m:
@@ -66,7 +66,7 @@ class UIHelpersMixin:
         else:
             self.fmt_frame.pack_forget()
         if "聊天室" in m:
-            self.chat_frame.pack(after=self.preview_frame, fill="x", padx=20, pady=10)
+            self.chat_frame.pack(after=self.seg_mode, fill="x", padx=20, pady=10)
             self.upd_chat_ui()
         else:
             self.chat_frame.pack_forget()
@@ -114,7 +114,7 @@ class UIHelpersMixin:
 
     def update_browser_selector(self, *args):
         if self.c_cookie.get() == "🔄 使用内置提取器":
-            self.browser_row.pack(fill="x", padx=10, pady=3)
+            self.browser_row.pack(fill="x", padx=10, pady=3, after=self._adv_r5)
         else:
             self.browser_row.pack_forget()
 

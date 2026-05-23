@@ -45,15 +45,20 @@ class ResumeMixin:
             )
 
     def check_resume_status(self):
-        pending_sessions = self.db.get_pending_resume_sessions()
-        count = len(pending_sessions) if pending_sessions else 0
-        if count > 0:
-            self.resume_status_label.configure(text=f"📂 {count}个任务可续传", text_color="orange")
-            self.btn_resume_manager.configure(fg_color="#FF8C42")
-        else:
-            self.resume_status_label.configure(text="无待续传任务", text_color="gray")
-            self.btn_resume_manager.configure(fg_color="#FF6B6B")
-        self.after(5000, self.check_resume_status)
+        try:
+            if not self.winfo_exists():
+                return
+            pending_sessions = self.db.get_pending_resume_sessions()
+            count = len(pending_sessions) if pending_sessions else 0
+            if count > 0:
+                self.resume_status_label.configure(text=f"📂 {count}个任务可续传", text_color="orange")
+                self.btn_resume_manager.configure(fg_color="#FF8C42")
+            else:
+                self.resume_status_label.configure(text="无待续传任务", text_color="gray")
+                self.btn_resume_manager.configure(fg_color="#FF6B6B")
+            self.after(5000, self.check_resume_status)
+        except Exception:
+            pass  # Window destroyed, stop polling
 
     def open_resume_manager(self):
         from ..resume import ResumeManagerWindow
