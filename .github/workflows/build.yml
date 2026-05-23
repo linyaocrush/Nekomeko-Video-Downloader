@@ -6,6 +6,11 @@ on:
       version:
         description: '版本号 (如 v1.0.0)'
         required: true
+      prerelease:
+        description: '是否为预发布版本'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -83,4 +88,4 @@ jobs:
             dist/Nekomeko-${{ github.event.inputs.version }}-single.exe
             dist/Nekomeko-${{ github.event.inputs.version }}-portable.zip
           draft: false
-          prerelease: false
+          prerelease: ${{ github.event.inputs.prerelease == 'true' }}
