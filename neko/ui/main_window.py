@@ -228,17 +228,17 @@ class NekoDownloader(DownloadMixin, QueueMixin, ResumeMixin, UIHelpersMixin, ctk
         tb.pack()
         ba = ctk.CTkFrame(tb, fg_color="transparent")
         ba.pack(side="left", padx=(0, 10))
-        ctk.CTkButton(ba, text="⚙️", width=40, height=30, fg_color="gray", command=lambda: [self.on_interact(), self.open_settings_window()]).pack(side="left", padx=2)
+        ctk.CTkButton(ba, text="⚙️", width=40, height=30, fg_color=_c.CURRENT_THEME["surface_variant"], command=lambda: [self.on_interact(), self.open_settings_window()]).pack(side="left", padx=2)
         ctk.CTkButton(ba, text="🎨", width=40, height=30, fg_color=_c.CURRENT_THEME["accent"], command=lambda: [self.on_interact(), self.open_theme_editor()]).pack(side="left", padx=2)
         ctk.CTkLabel(tb, text="🐾 猫娘下载器", font=FONT_T, text_color=_c.CURRENT_THEME["accent"]).pack(side="left", padx=10)
-        ctk.CTkButton(tb, text="📊 记忆仓库", width=120, height=30, fg_color="#9370DB", command=lambda: [self.on_interact(), self.open_stats_window()]).pack(side="left", padx=10)
+        ctk.CTkButton(tb, text="📊 记忆仓库", width=120, height=30, fg_color=_c.CURRENT_THEME["secondary_container"], text_color=_c.CURRENT_THEME["on_secondary_container"], command=lambda: [self.on_interact(), self.open_stats_window()]).pack(side="left", padx=10)
 
-        self.l_version = ctk.CTkLabel(top, text="Checking...", font=FONT_S, text_color="#888")
+        self.l_version = ctk.CTkLabel(top, text="Checking...", font=FONT_S, text_color=_c.CURRENT_THEME["on_surface_variant"])
         self.l_version.pack(pady=(0, 5))
-        self.header_tip = ctk.CTkLabel(self, text="主人喵~ 正在把小窝收拾得漂漂亮亮…", font=FONT_N, text_color="gray")
+        self.header_tip = ctk.CTkLabel(self, text="主人喵~ 正在把小窝收拾得漂漂亮亮…", font=FONT_N, text_color=_c.CURRENT_THEME["on_surface_variant"])
         self.header_tip.pack(pady=(0, 2))
 
-        self.credit_label = ctk.CTkLabel(self, text="本软件为个人学习交流用途喵~ 请勿用于商业用途。", font=("微软雅黑", 10), text_color="red", cursor="hand2")
+        self.credit_label = ctk.CTkLabel(self, text="本软件为个人学习交流用途喵~ 请勿用于商业用途。", font=("微软雅黑", 10), text_color=_c.CURRENT_THEME["error"], cursor="hand2")
         self.credit_label.pack(pady=(0, 8))
         self.credit_label.bind("<Button-1>", lambda e: webbrowser.open("https://space.bilibili.com/387715606"))
 
@@ -256,12 +256,12 @@ class NekoDownloader(DownloadMixin, QueueMixin, ResumeMixin, UIHelpersMixin, ctk
 
         bg = ctk.CTkFrame(inp, fg_color="transparent")
         bg.pack(fill="x")
-        ctk.CTkButton(bg, text="🐾 先闻一闻", height=40, font=FONT_B, fg_color="#D8BFD8", command=lambda: [self.on_interact(), self.start_thread(self.analyze_ui_wrapper)]).pack(side="left", fill="x", expand=True, padx=(0, 5))
-        ctk.CTkButton(bg, text="📚 批量喂食", height=40, font=FONT_B, fg_color="#87CEEB", command=lambda: [self.on_interact(), self.open_batch_window()]).pack(side="left", fill="x", expand=True, padx=(5, 0))
+        ctk.CTkButton(bg, text="🐾 先闻一闻", height=40, font=FONT_B, fg_color=_c.CURRENT_THEME["primary_container"], text_color=_c.CURRENT_THEME["on_primary_container"], command=lambda: [self.on_interact(), self.start_thread(self.analyze_ui_wrapper)]).pack(side="left", fill="x", expand=True, padx=(0, 5))
+        ctk.CTkButton(bg, text="📚 批量喂食", height=40, font=FONT_B, fg_color=_c.CURRENT_THEME["tertiary_container"], text_color=_c.CURRENT_THEME["on_tertiary_container"], command=lambda: [self.on_interact(), self.open_batch_window()]).pack(side="left", fill="x", expand=True, padx=(5, 0))
 
         self.preview_frame = ctk.CTkFrame(self.left_panel, fg_color=_c.CURRENT_THEME["panel_bg"], corner_radius=15)
         self.preview_frame.pack(fill="x", padx=20, pady=5)
-        self.l_thumb = ctk.CTkLabel(self.preview_frame, text="[猫猫待机]", width=160, height=90, fg_color="#E0E0E0", corner_radius=10)
+        self.l_thumb = ctk.CTkLabel(self.preview_frame, text="[猫猫待机]", width=160, height=90, fg_color=_c.CURRENT_THEME["surface_variant"], corner_radius=10)
         self.l_thumb.pack(side="left", padx=15, pady=15)
         self.l_info = ctk.CTkLabel(self.preview_frame, text="等待任务...", font=FONT_N, justify="left", anchor="w", text_color=_c.CURRENT_THEME["text"])
         self.l_info.pack(side="left", fill="both", expand=True, padx=10)
@@ -281,7 +281,7 @@ class NekoDownloader(DownloadMixin, QueueMixin, ResumeMixin, UIHelpersMixin, ctk
         self.chat_mode_var = ctk.StringVar(value=self.cfg.get("chat_mode", "full"))
         ctk.CTkRadioButton(self.chat_frame, text="全部完整记录 (Raw JSON)", variable=self.chat_mode_var, value="full", font=FONT_N, text_color=_c.CURRENT_THEME["text"], fg_color=_c.CURRENT_THEME["accent"], command=self.upd_chat_ui).pack(anchor="w", padx=10, pady=5)
         ctk.CTkRadioButton(self.chat_frame, text="精简筛选 (Filter JSON)", variable=self.chat_mode_var, value="filter", font=FONT_N, text_color=_c.CURRENT_THEME["text"], fg_color=_c.CURRENT_THEME["accent"], command=self.upd_chat_ui).pack(anchor="w", padx=10, pady=5)
-        self.btn_chat_filter = ctk.CTkButton(self.chat_frame, text="⚙️ 选择保留项...", width=150, fg_color="#9370DB", command=self.open_filter_selector)
+        self.btn_chat_filter = ctk.CTkButton(self.chat_frame, text="⚙️ 选择保留项...", width=150, fg_color=_c.CURRENT_THEME["secondary_container"], text_color=_c.CURRENT_THEME["on_secondary_container"], command=self.open_filter_selector)
         self.chat_filters = self.cfg.get("chat_filters", ["author", "message", "timestamp"])
 
         cfg = ctk.CTkFrame(self.left_panel, fg_color="transparent")
@@ -313,7 +313,7 @@ class NekoDownloader(DownloadMixin, QueueMixin, ResumeMixin, UIHelpersMixin, ctk
         self.e_dir = ctk.CTkEntry(rd, placeholder_text="位置...", height=35, font=FONT_N, fg_color=_c.CURRENT_THEME["panel_bg"], text_color=_c.CURRENT_THEME["text"])
         self.e_dir.insert(0, self.cfg["dir"])
         self.e_dir.pack(side="left", fill="x", expand=True, padx=(0, 5))
-        ctk.CTkButton(rd, text="🏷️", width=60, height=35, font=FONT_B, fg_color="#9370DB", command=lambda: [self.on_interact(), self.open_template_window()]).pack(side="left", padx=(0, 5))
+        ctk.CTkButton(rd, text="🏷️", width=60, height=35, font=FONT_B, fg_color=_c.CURRENT_THEME["secondary_container"], text_color=_c.CURRENT_THEME["on_secondary_container"], command=lambda: [self.on_interact(), self.open_template_window()]).pack(side="left", padx=(0, 5))
         ctk.CTkButton(rd, text="📂", width=50, height=35, font=FONT_B, fg_color=_c.CURRENT_THEME["accent"], command=self.browse).pack(side="left")
 
         sws = ctk.CTkFrame(self.left_panel, fg_color="transparent")
@@ -359,7 +359,7 @@ class NekoDownloader(DownloadMixin, QueueMixin, ResumeMixin, UIHelpersMixin, ctk
         left_part = ctk.CTkFrame(self.browser_frame, fg_color="transparent")
         left_part.grid(row=0, column=0, sticky="nsew", padx=(0, 5))
         ctk.CTkLabel(left_part, text="🌐 浏览器 Cookie 授权", font=FONT_B, text_color=_c.CURRENT_THEME["text"], anchor="w").pack(fill="x")
-        ctk.CTkLabel(left_part, text="选择已登录视频网站的浏览器以获取会员权限", font=FONT_S, text_color="gray", anchor="w").pack(fill="x")
+        ctk.CTkLabel(left_part, text="选择已登录视频网站的浏览器以获取会员权限", font=FONT_S, text_color=_c.CURRENT_THEME["on_surface_variant"], anchor="w").pack(fill="x")
 
         right_part = ctk.CTkFrame(self.browser_frame, fg_color="transparent")
         right_part.grid(row=0, column=1, sticky="nsew", padx=(5, 0))
@@ -403,9 +403,9 @@ class NekoDownloader(DownloadMixin, QueueMixin, ResumeMixin, UIHelpersMixin, ctk
 
         resume_frame = ctk.CTkFrame(self.left_panel, fg_color="transparent")
         resume_frame.pack(fill="x", padx=20, pady=5)
-        self.btn_resume_manager = ctk.CTkButton(resume_frame, text="🔄 续传管理", height=30, font=FONT_N, fg_color="#FF6B6B", command=lambda: [self.on_interact(), self.open_resume_manager()])
+        self.btn_resume_manager = ctk.CTkButton(resume_frame, text="🔄 续传管理", height=30, font=FONT_N, fg_color=_c.CURRENT_THEME["error_container"], text_color=_c.CURRENT_THEME["on_error_container"], command=lambda: [self.on_interact(), self.open_resume_manager()])
         self.btn_resume_manager.pack(side="left", padx=(0, 10))
-        self.resume_status_label = ctk.CTkLabel(resume_frame, text="无待续传任务", font=FONT_S, text_color="gray")
+        self.resume_status_label = ctk.CTkLabel(resume_frame, text="无待续传任务", font=FONT_S, text_color=_c.CURRENT_THEME["on_surface_variant"])
         self.resume_status_label.pack(side="left")
         self.after(5000, self.check_resume_status)
 
@@ -422,7 +422,7 @@ class NekoDownloader(DownloadMixin, QueueMixin, ResumeMixin, UIHelpersMixin, ctk
         self.btn_start = ctk.CTkButton(bb, text="🚀 叼回窝里", height=50, font=FONT_B, fg_color=_c.CURRENT_THEME["btn_start_bg"], text_color=_c.CURRENT_THEME["btn_start_fg"], hover_color=_c.CURRENT_THEME["btn_start_bg"], command=lambda: [self.on_interact(), self.start_thread(self.process_queue)])
         self.btn_start.grid(row=0, column=2, padx=(5, 0), sticky="ew")
 
-        self.l_status = ctk.CTkLabel(self.left_panel, text="呼噜呼噜… 待命中喵", font=FONT_S, text_color="gray")
+        self.l_status = ctk.CTkLabel(self.left_panel, text="呼噜呼噜… 待命中喵", font=FONT_S, text_color=_c.CURRENT_THEME["on_surface_variant"])
         self.l_status.pack(pady=(0, 2))
         self.prog = ctk.CTkProgressBar(self.left_panel, progress_color=_c.CURRENT_THEME["accent"], height=12)
         self.prog.pack(fill="x", padx=20, pady=(0, 10))

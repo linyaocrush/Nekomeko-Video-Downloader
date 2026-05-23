@@ -304,7 +304,7 @@ class UIHelpersMixin:
             row = ctk.CTkFrame(win, fg_color="transparent")
             row.pack(fill="x", padx=30, pady=4)
             ctk.CTkLabel(row, text=f"❌ {name}", font=FONT_N, width=120, anchor="w", text_color=_c.CURRENT_THEME["text"]).pack(side="left")
-            ctk.CTkButton(row, text="📥 前往下载", width=100, fg_color="#9370DB", command=lambda u=url: webbrowser.open(u)).pack(side="right")
+            ctk.CTkButton(row, text="📥 前往下载", width=100, fg_color=_c.CURRENT_THEME["secondary_container"], text_color=_c.CURRENT_THEME["on_secondary_container"], command=lambda u=url: webbrowser.open(u)).pack(side="right")
             ctk.CTkLabel(row, text="或放入程序根目录", font=FONT_S, text_color="gray").pack(side="right", padx=8)
 
         ctk.CTkButton(win, text="⚙️ 打开设置手动指定路径", width=200, fg_color=_c.CURRENT_THEME["accent"], command=lambda: [win.destroy(), self.open_settings_window()]).pack(pady=(15, 5))

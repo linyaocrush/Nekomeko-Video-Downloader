@@ -131,10 +131,15 @@ class ThemeEditorWindow(ctk.CTkToplevel):
             setattr(self, f"val_{key}", color[1])
 
     def save_theme(self):
-        new_data = {"mode": self.seg_mode.get()}
-        all_keys = [k for k in BASE_THEME_TEMPLATE if k != "mode"]
-        for k in all_keys:
-            new_data[k] = getattr(self, f"val_{k}")
+        # Start from the full current preset (preserves MD3 keys not exposed in editor)
+        new_data = self._theme_manager.load_preset(self.c_theme.get()).copy()
+        new_data["mode"] = self.seg_mode.get()
+        # Only overwrite keys that have color pickers in the editor
+        for k in BASE_THEME_TEMPLATE:
+            if k == "mode":
+                continue
+            if hasattr(self, f"val_{k}"):
+                new_data[k] = getattr(self, f"val_{k}")
 
         target_name = self.e_new_name.get().strip()
         if not target_name:
@@ -147,8 +152,9 @@ class ThemeEditorWindow(ctk.CTkToplevel):
         if self._theme_manager.save_preset(target_name, new_data):
             self._theme_manager.set_active_theme_record(target_name)
             if messagebox.askyesno("保存成功", f"主题 '{target_name}' 已保存！\n需要重启生效，立即重启？"):
-                python = sys.executable
-                os.execl(python, python, *sys.argv)
+                import subprocess
+                subprocess.Popen([sys.executable, "-m", "neko.main"], cwd=os.getcwd())
+                sys.exit(0)
             else:
                 self.destroy()
 
@@ -174,7 +180,7 @@ class SettingsWindow(ctk.CTkToplevel):
         btn_box = ctk.CTkFrame(self, fg_color="transparent")
         btn_box.pack(pady=20)
         ctk.CTkButton(btn_box, text="💾 保存", fg_color=_c.CURRENT_THEME["accent"], command=self.save).pack(side="left", padx=10)
-        ctk.CTkButton(btn_box, text="❌ 取消", fg_color="gray", command=self.destroy).pack(side="left", padx=10)
+        ctk.CTkButton(btn_box, text="❌ 取消", fg_color=_c.CURRENT_THEME["surface_variant"], command=self.destroy).pack(side="left", padx=10)
 
     def mk_path_row(self, lbl, key, url, val, is_dir=False):
         f = ctk.CTkFrame(self, fg_color="transparent")
@@ -182,7 +188,7 @@ class SettingsWindow(ctk.CTkToplevel):
         t = ctk.CTkFrame(f, fg_color="transparent")
         t.pack(fill="x")
         ctk.CTkLabel(t, text=lbl, width=100, anchor="w", text_color=_c.CURRENT_THEME["text"]).pack(side="left")
-        ctk.CTkButton(t, text="⬇️ 下载", width=60, height=20, fg_color="#9370DB", command=lambda: webbrowser.open(url)).pack(side="right")
+        ctk.CTkButton(t, text="⬇️ 下载", width=60, height=20, fg_color=_c.CURRENT_THEME["secondary_container"], text_color=_c.CURRENT_THEME["on_secondary_container"], command=lambda: webbrowser.open(url)).pack(side="right")
         b = ctk.CTkFrame(f, fg_color="transparent")
         b.pack(fill="x", pady=2)
         e = ctk.CTkEntry(b, width=350, fg_color=_c.CURRENT_THEME["panel_bg"], text_color=_c.CURRENT_THEME["text"])
@@ -196,7 +202,7 @@ class SettingsWindow(ctk.CTkToplevel):
             e.insert(0, sys_path)
             e.configure(state="disabled")
             btn.configure(state="disabled")
-            ctk.CTkLabel(b, text="✅ 系统环境", text_color="green").pack(side="left", padx=5)
+            ctk.CTkLabel(b, text="✅ 系统环境", text_color=_c.CURRENT_THEME["tertiary"]).pack(side="left", padx=5)
         else:
             e.insert(0, val)
 
@@ -256,14 +262,14 @@ class SponsorSelectWindow(ctk.CTkToplevel):
         self.all_var.pack(anchor="w", pady=5)
         self.vars["all"] = self.all_var
 
-        ctk.CTkFrame(scroll, height=2, fg_color="#ddd").pack(fill="x", pady=10)
+        ctk.CTkFrame(scroll, height=2, fg_color=_c.CURRENT_THEME["outline_variant"]).pack(fill="x", pady=10)
 
         for key, label in self.cats_map.items():
             if key == "all":
                 continue
             v = ctk.CTkCheckBox(
                 scroll, text=label, font=FONT_N,
-                border_color="#9370DB", fg_color="#9370DB",
+                border_color=_c.CURRENT_THEME["primary"], fg_color=_c.CURRENT_THEME["primary"],
                 command=lambda k=key: self.on_item_click(k),
                 text_color=_c.CURRENT_THEME["text"],
             )
@@ -310,7 +316,7 @@ class BatchUrlWindow(ctk.CTkToplevel):
 
         btn_f = ctk.CTkFrame(self, fg_color="transparent")
         btn_f.pack(pady=15)
-        ctk.CTkButton(btn_f, text="❌ 算了", fg_color="gray", width=100, command=self.destroy).pack(side="left", padx=10)
+        ctk.CTkButton(btn_f, text="❌ 算了", fg_color=_c.CURRENT_THEME["surface_variant"], width=100, command=self.destroy).pack(side="left", padx=10)
         ctk.CTkButton(btn_f, text="✅ 全部吞掉", fg_color=_c.CURRENT_THEME["accent"], width=150, font=FONT_B, command=self.confirm).pack(side="left", padx=10)
 
     def confirm(self):
@@ -358,7 +364,7 @@ class TemplateEditorWindow(ctk.CTkToplevel):
             ("📂 原文件名", "%(original_filename)s"),
         ]
         for i, (t, v) in enumerate(tags):
-            ctk.CTkButton(scroll, text=t, font=FONT_N, fg_color="#9370DB", command=lambda v=v: self.e_tmpl.insert("end", v)).grid(row=i // 2, column=i % 2, padx=10, pady=5, sticky="ew")
+            ctk.CTkButton(scroll, text=t, font=FONT_N, fg_color=_c.CURRENT_THEME["secondary_container"], text_color=_c.CURRENT_THEME["on_secondary_container"], command=lambda v=v: self.e_tmpl.insert("end", v)).grid(row=i // 2, column=i % 2, padx=10, pady=5, sticky="ew")
         scroll.columnconfigure(0, weight=1)
         scroll.columnconfigure(1, weight=1)
 
@@ -478,7 +484,7 @@ class TaskEditWindow(ctk.CTkToplevel):
         else:
             self.chat_mode_filter.select()
 
-        self.btn_chat_filter = ctk.CTkButton(self.chat_frame, text="⚙️ 选择保留项...", width=150, fg_color="#9370DB", command=self.open_filter_selector)
+        self.btn_chat_filter = ctk.CTkButton(self.chat_frame, text="⚙️ 选择保留项...", width=150, fg_color=_c.CURRENT_THEME["secondary_container"], text_color=_c.CURRENT_THEME["on_secondary_container"], command=self.open_filter_selector)
         self.chat_filters = cfg.get("chat_filters", ["author", "message", "timestamp"])
 
         self.sw_embed = ctk.CTkSwitch(scroll, text="硬塞字幕", font=FONT_N, progress_color=_c.CURRENT_THEME["accent"], text_color=_c.CURRENT_THEME["text"])

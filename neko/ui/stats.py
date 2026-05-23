@@ -50,10 +50,10 @@ class StatsWindow(ctk.CTkToplevel):
         spd = (data["total_size"] / data["total_time"] / (1024 ** 2)) if data["total_time"] > 0 else 0
         hrs = data["total_time"] / 3600
         c_bg = _c.CURRENT_THEME["panel_bg"]
-        self.mk_card(card_frame, 0, "📦 总搬运量", f"{t_gb:.2f} GB", c_bg, "#1E90FF")
-        self.mk_card(card_frame, 1, "⚡ 平均速度", f"{spd:.1f} MB/s", c_bg, "#00CB82")
-        self.mk_card(card_frame, 2, "⏳ 抓老鼠耗时", f"{hrs:.1f} 小时", c_bg, "#FF8C00")
-        self.mk_card(card_frame, 3, "🎬 视频总数", f"{data['total_count']} 个", c_bg, _c.CURRENT_THEME["accent"])
+        self.mk_card(card_frame, 0, "📦 总搬运量", f"{t_gb:.2f} GB", c_bg, _c.CURRENT_THEME["primary"])
+        self.mk_card(card_frame, 1, "⚡ 平均速度", f"{spd:.1f} MB/s", c_bg, _c.CURRENT_THEME["tertiary"])
+        self.mk_card(card_frame, 2, "⏳ 抓老鼠耗时", f"{hrs:.1f} 小时", c_bg, _c.CURRENT_THEME["secondary"])
+        self.mk_card(card_frame, 3, "🎬 视频总数", f"{data['total_count']} 个", c_bg, _c.CURRENT_THEME["primary"])
 
         p_frame = ctk.CTkFrame(main_frame, fg_color=_c.CURRENT_THEME["secondary"], corner_radius=10)
         p_frame.grid(row=1, column=0, sticky="nsew", pady=5)
@@ -83,22 +83,22 @@ class StatsWindow(ctk.CTkToplevel):
         f.grid(row=0, column=c, sticky="nsew", padx=3)
         f.grid_columnconfigure(0, weight=1)
         f.grid_rowconfigure((0, 3), weight=1)
-        ctk.CTkLabel(f, text=t, font=("微软雅黑", 11), text_color="#666").grid(row=1, column=0)
+        ctk.CTkLabel(f, text=t, font=("微软雅黑", 11), text_color=_c.CURRENT_THEME["on_surface_variant"]).grid(row=1, column=0)
         ctk.CTkLabel(f, text=v, font=("Arial", 18, "bold"), text_color=fg).grid(row=2, column=0)
 
     def mk_period(self, p, c, t, count, size):
         f = ctk.CTkFrame(p, fg_color="transparent")
         f.grid(row=0, column=c, sticky="ns", padx=10, pady=5)
-        ctk.CTkLabel(f, text=t, font=("微软雅黑", 12, "bold"), text_color="gray").pack()
+        ctk.CTkLabel(f, text=t, font=("微软雅黑", 12, "bold"), text_color=_c.CURRENT_THEME["on_surface_variant"]).pack()
         ctk.CTkLabel(f, text=f"{count}个", font=("Arial", 18, "bold"), text_color=_c.CURRENT_THEME["accent"]).pack()
-        ctk.CTkLabel(f, text=f"({size // 1048576} MB)", font=("Arial", 10), text_color="#888").pack()
+        ctk.CTkLabel(f, text=f"({size // 1048576} MB)", font=("Arial", 10), text_color=_c.CURRENT_THEME["on_surface_variant"]).pack()
 
     def mk_chart_box(self, p, r, c, t, func):
         f = ctk.CTkFrame(p, fg_color=_c.CURRENT_THEME["secondary"], corner_radius=10)
         f.grid(row=r, column=c, sticky="nsew", padx=4, pady=4)
         f.grid_rowconfigure(1, weight=1)
         f.grid_columnconfigure(0, weight=1)
-        ctk.CTkLabel(f, text=t, font=("微软雅黑", 11, "bold"), text_color="#888", anchor="w").grid(row=0, column=0, sticky="w", padx=10, pady=5)
+        ctk.CTkLabel(f, text=t, font=("微软雅黑", 11, "bold"), text_color=_c.CURRENT_THEME["on_surface_variant"], anchor="w").grid(row=0, column=0, sticky="w", padx=10, pady=5)
         c_frame = ctk.CTkFrame(f, fg_color="transparent")
         c_frame.grid(row=1, column=0, sticky="nsew", padx=5, pady=5)
         func(c_frame)
@@ -119,14 +119,14 @@ class StatsWindow(ctk.CTkToplevel):
     def draw_list(self, p, d):
         items = sorted(d.items(), key=lambda x: x[1], reverse=True)[:5]
         if not items:
-            ctk.CTkLabel(p, text="无数据", text_color="#ccc").pack(expand=True)
+            ctk.CTkLabel(p, text="无数据", text_color=_c.CURRENT_THEME["outline"]).pack(expand=True)
             return
         mx = items[0][1] if items[0][1] > 0 else 1
         for i, (k, v) in enumerate(items):
             p.grid_rowconfigure(i, weight=1)
             p.grid_columnconfigure(1, weight=1)
             ctk.CTkLabel(p, text=k[:12], width=80, font=("微软雅黑", 10), text_color=_c.CURRENT_THEME["text"], anchor="w").grid(row=i, column=0)
-            pb = ctk.CTkProgressBar(p, height=10, progress_color="#87CEEB")
+            pb = ctk.CTkProgressBar(p, height=10, progress_color=_c.CURRENT_THEME["tertiary_container"])
             pb.grid(row=i, column=1, sticky="ew", padx=5)
             pb.set(v / mx)
             ctk.CTkLabel(p, text=str(v), width=25, font=("Arial", 10), text_color=_c.CURRENT_THEME["text"], anchor="e").grid(row=i, column=2)
@@ -140,9 +140,9 @@ class StatsWindow(ctk.CTkToplevel):
         self.search_var.trace("w", lambda *a: self.refresh_history_delayed())
         ctk.CTkEntry(c, textvariable=self.search_var, width=250, text_color=_c.CURRENT_THEME["text"], fg_color=_c.CURRENT_THEME["panel_bg"]).pack(side="left", padx=5)
         self.filter_visible = False
-        self.btn_toggle_filter = ctk.CTkButton(c, text="🌪️ 筛选", width=60, fg_color="#9370DB", command=self.toggle_filters)
+        self.btn_toggle_filter = ctk.CTkButton(c, text="🌪️ 筛选", width=60, fg_color=_c.CURRENT_THEME["secondary_container"], text_color=_c.CURRENT_THEME["on_secondary_container"], command=self.toggle_filters)
         self.btn_toggle_filter.pack(side="left", padx=5)
-        ctk.CTkButton(c, text="🔄", width=40, fg_color="gray", command=self.refresh_history).pack(side="right", padx=5)
+        ctk.CTkButton(c, text="🔄", width=40, fg_color=_c.CURRENT_THEME["surface_variant"], command=self.refresh_history).pack(side="right", padx=5)
 
         self.filter_frame = ctk.CTkFrame(self.tab_history, fg_color=_c.CURRENT_THEME["panel_bg"], corner_radius=6)
         all_ups = ["全部"] + self.db.get_all_uploaders()
@@ -163,7 +163,7 @@ class StatsWindow(ctk.CTkToplevel):
         if self.filter_visible:
             self.filter_frame.grid_forget()
             self.filter_visible = False
-            self.btn_toggle_filter.configure(fg_color="#9370DB")
+            self.btn_toggle_filter.configure(fg_color=_c.CURRENT_THEME["secondary_container"], text_color=_c.CURRENT_THEME["on_secondary_container"])
         else:
             self.filter_frame.grid(row=1, column=0, sticky="ew", padx=10, pady=5)
             self.filter_visible = True
@@ -197,10 +197,10 @@ class StatsWindow(ctk.CTkToplevel):
             f = ctk.CTkFrame(item, fg_color="transparent")
             f.pack(side="left", fill="x", expand=True, padx=8, pady=4)
             ctk.CTkLabel(f, text=r.title, font=("微软雅黑", 12, "bold"), text_color=_c.CURRENT_THEME["text"], anchor="w").pack(fill="x")
-            ctk.CTkLabel(f, text=f"{r.uploader} | {r.download_date} | {r.size_mb:.1f}MB | ⏱ {r.duration}s", font=("微软雅黑", 10), text_color="gray", anchor="w").pack(fill="x")
+            ctk.CTkLabel(f, text=f"{r.uploader} | {r.download_date} | {r.size_mb:.1f}MB | ⏱ {r.duration}s", font=("微软雅黑", 10), text_color=_c.CURRENT_THEME["on_surface_variant"], anchor="w").pack(fill="x")
             act = ctk.CTkFrame(item, fg_color="transparent")
             act.pack(side="right", padx=5)
             if r.webpage_url:
-                ctk.CTkButton(act, text="📺", width=30, height=24, fg_color="#87CEEB", command=lambda u=r.webpage_url: webbrowser.open(u)).pack(side="left", padx=1)
+                ctk.CTkButton(act, text="📺", width=30, height=24, fg_color=_c.CURRENT_THEME["tertiary_container"], text_color=_c.CURRENT_THEME["on_tertiary_container"], command=lambda u=r.webpage_url: webbrowser.open(u)).pack(side="left", padx=1)
             if r.uploader_url:
                 ctk.CTkButton(act, text="🏠", width=30, height=24, fg_color="#DDA0DD", command=lambda u=r.uploader_url: webbrowser.open(u)).pack(side="left", padx=1)
