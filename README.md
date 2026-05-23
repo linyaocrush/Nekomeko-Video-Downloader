@@ -83,7 +83,7 @@ cd neko-downloader
 
 # 2. 创建虚拟环境并安装依赖
 python -m venv venv
-venv\Scripts\pip install customtkinter pydantic Pillow
+venv\Scripts\pip install -r requirements.txt
 
 # 3. 双击运行
 run.bat
@@ -97,7 +97,7 @@ run.bat
 
 ```
 ├── run.bat                      # ⚡ 一键启动 (pythonw -m neko.main)
-├── pyproject.toml               # 📦 项目配置与依赖
+├── requirements.txt             # 📦 Python 依赖
 │
 ├── neko/                        # 🐱 主包
 │   ├── main.py                  #   启动入口
@@ -196,6 +196,6 @@ run.bat
 
 <br/>
 
-<img src="https://img.shields.io/badge/made_with_❤️_by-nekomiko-FF69B4?style=for-the-badge" />
+<img src="https://img.shields.io/badge/made_with_❤️_by-linyaocrush-FF69B4?style=for-the-badge" />
 
 </div>
