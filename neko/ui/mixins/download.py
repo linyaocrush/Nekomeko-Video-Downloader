@@ -12,7 +12,7 @@ import logging
 import customtkinter as ctk
 from PIL import Image
 
-from ...core.utils import safe_run, show_windows_toast
+from ...core.utils import safe_run
 
 logger = logging.getLogger(__name__)
 
@@ -257,43 +257,6 @@ class DownloadMixin:
             "subtitle_lang": subtitle_lang,
         }, " ".join(desc)
 
-    def download_now_flow(self):
-        u = self.run_safe(lambda: self.e_url.get().strip())
-        if not u:
-            return
-        if (u != self.last_analyzed_url) or (self.current_meta is None):
-            self.perform_analysis(u)
-            if "手动" in self.run_safe(self.seg_mode.get):
-                self.log("Select format first...", "happy")
-                return
-        cfg, _ = self.run_safe(self.build_current_config)
-        self.log("Direct downloading...", "working")
-        self.run_safe(lambda: [self.btn_now.configure(state="disabled"), self.btn_add.configure(state="disabled")])
-
-        session_id = self.generate_session_id(cfg['url'], cfg['dir'])
-        temp_file = self.find_current_temp_file(cfg, self.current_meta)
-
-        session_dict = None
-        if temp_file:
-            session_dict = {
-                'session_id': session_id, 'url': cfg['url'],
-                'output_path': cfg['dir'], 'temp_file': temp_file,
-            }
-            self.log("Detected partial file, attempting resume...", "working")
-
-        suc = self.download_item_with_resume(cfg, self.current_meta, session_dict)
-
-        self.run_safe(lambda: [self.btn_now.configure(state="normal"), self.btn_add.configure(state="normal")])
-        if suc:
-            show_windows_toast("Neko", "Done!")
-            self.log("Done!", "done")
-            self.mood_manager.report_success()
-        else:
-            self.log("Failed.", "sad")
-            self.mood_manager.report_fail()
-        self.run_safe(lambda: self.l_status.configure(text="待命中喵"))
-        self.update_mood_display()
-
     @safe_run
     def download_item_with_resume(self, cfg, meta, resume_session=None):
         session_id = resume_session['session_id'] if resume_session else self.generate_session_id(cfg['url'], cfg['dir'])
@@ -430,11 +393,25 @@ class DownloadMixin:
         ret = re.compile(r"ETA\s+(\S+)")
         st = time.time()
         last_save_time = 0
+        last_ui_time = 0
         final_file_path = None
+        # Throttled UI state — only applied to widgets at 200ms intervals
+        pending_pct = None
+        pending_txt = None
 
         re_merge = re.compile(r'\[Merger\] Merging formats into "(.*?)"')
         re_dest = re.compile(r'\[download\] Destination: (.*)')
         re_exist = re.compile(r'\[download\] (.*?) has already been downloaded')
+
+        def flush_ui():
+            nonlocal last_ui_time, pending_pct, pending_txt
+            if pending_pct is not None:
+                self.run_safe(lambda p=pending_pct: self.prog.set(p))
+                pending_pct = None
+            if pending_txt is not None:
+                self.run_safe(lambda t=pending_txt: self.l_status.configure(text=t))
+                pending_txt = None
+            last_ui_time = time.time()
 
         for l in p.stdout:
             if "Merger" in l:
@@ -450,7 +427,7 @@ class DownloadMixin:
             if "[download]" in l and "%" in l:
                 if mp := rp.search(l):
                     pct = float(mp.group(1))
-                    self.run_safe(lambda: self.prog.set(pct / 100))
+                    pending_pct = pct / 100
                     txt = f"{pct}%"
                     if ms := rs.search(l):
                         size_str = ms.group(1)
@@ -459,7 +436,11 @@ class DownloadMixin:
                         txt += f" | {msp.group(1)}"
                     if me := ret.search(l):
                         txt += f" | {me.group(1)}"
-                    self.run_safe(lambda: self.l_status.configure(text=txt))
+                    pending_txt = txt
+
+                    # Flush UI at most once per 200ms
+                    if time.time() - last_ui_time > 0.2:
+                        flush_ui()
 
                     if time.time() - last_save_time > 2:
                         temp_file = self.find_current_temp_file(cfg, meta)
@@ -469,6 +450,9 @@ class DownloadMixin:
                             last_save_time = time.time()
             elif not any(x in l for x in ["[download]", "Deleting"]):
                 self.log(l.strip())
+
+        # Flush any remaining progress
+        flush_ui()
 
         p.wait()
         self.run_safe(lambda: self.prog.set(1 if p.returncode == 0 else 0))

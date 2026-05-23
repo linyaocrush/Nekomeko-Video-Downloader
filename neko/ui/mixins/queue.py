@@ -1,4 +1,5 @@
 import threading
+import logging
 
 import customtkinter as ctk
 import tkinter as tk
@@ -6,10 +7,15 @@ import tkinter as tk
 from ...core.constants import FONT_Q_TITLE, FONT_Q_DESC
 from ...core.utils import safe_run, show_windows_toast
 from ...core import constants as _c
+from .scheduler import TaskScheduler
+
+logger = logging.getLogger(__name__)
 
 
 class QueueMixin:
     """Download queue: add, edit, delete, process items."""
+
+    # ── Add / Edit / Delete ─────────────────────────────────────
 
     def smart_add_flow(self):
         u = self.run_safe(lambda: self.e_url.get().strip())
@@ -75,48 +81,121 @@ class QueueMixin:
             self.log("Task updated.", "happy")
         TaskEditWindow(self, i, save)
 
+    # ── Process queue (non-blocking) ───────────────────────────
+
     def process_queue(self):
         q = [i for i in self.queue_items if i['status'] == 'waiting']
         if not q:
             self.log("篮子空空的喵…", "sad")
             return
+
         self.run_safe(lambda: [self.btn_add.configure(state="disabled"), self.btn_start.configure(state="disabled")])
         self.log(f"Processing {len(q)} items...", "working")
-        sem = threading.Semaphore(self.max_concurrent)
-        ths = []
-        for i, it in enumerate(q):
-            t = threading.Thread(target=self._dw, args=(it, sem), daemon=True)
-            t.start()
-            ths.append(t)
-        for t in ths:
-            t.join()
-        self.run_safe(lambda: [self.btn_add.configure(state="normal"), self.btn_start.configure(state="normal"), self.l_status.configure(text="Finished")])
+
+        self._scheduler = TaskScheduler(
+            max_workers=self.max_concurrent,
+            ui_callback=self._on_task_event,
+            done_callback=self._on_queue_finished,
+            after_fn=self.after,
+        )
+        self._scheduler.start_polling(self)
+
+        for it in q:
+            it['status'] = 'running'
+            self._scheduler.submit(it, self._worker_task, it)
+
+    def _worker_task(self, task_id, it):
+        """Runs on a worker thread. Pushes events to the scheduler queue."""
+        sched = self._scheduler
+
+        sched.push_event(task_id, "status", {"state": "running"})
+
+        cfg = it['config']
+        session_id = self.generate_session_id(cfg['url'], cfg['dir'])
+        temp_file = self.find_current_temp_file(cfg, it['meta'])
+        session_dict = None
+        if temp_file:
+            session_dict = {
+                'session_id': session_id, 'url': cfg['url'],
+                'output_path': cfg['dir'], 'temp_file': temp_file,
+            }
+
+        ok = self.download_item_with_resume(cfg, it['meta'], session_dict)
+
+        if ok:
+            sched.push_event(task_id, "status", {"state": "done"})
+            self.mood_manager.download_success_today += 1
+        else:
+            sched.push_event(task_id, "status", {"state": "error"})
+
+    def _on_task_event(self, evt):
+        """Called on the main thread for each event from a worker."""
+        pkt = evt.task_id  # the queue item dict
+        if evt.kind == "status":
+            state = evt.data.get("state", "")
+            if state == "running":
+                pkt['label'].configure(text="Running", text_color="orange")
+            elif state == "done":
+                pkt['label'].configure(text="Done", text_color="green")
+                pkt['status'] = 'done'
+            elif state == "error":
+                pkt['label'].configure(text="Error", text_color="red")
+                pkt['status'] = 'error'
+
+    def _on_queue_finished(self):
+        """Called on the main thread when all tasks complete."""
+        self.run_safe(lambda: [
+            self.btn_add.configure(state="normal"),
+            self.btn_start.configure(state="normal"),
+            self.l_status.configure(text="Finished"),
+        ])
         self.log("全部叼回窝里啦喵！", "done")
         show_windows_toast("Neko", "Queue finished!")
         self.mood_manager.interact()
         self.mood_manager.update_logic()
         self.update_mood_display()
 
-    @safe_run
-    def _dw(self, it, sem):
-        with sem:
-            self.run_safe(lambda: it['label'].configure(text="Running", text_color="orange"))
-            it['status'] = 'running'
+    # ── Single download flow (also uses scheduler for consistency)
 
-            cfg = it['config']
-            session_id = self.generate_session_id(cfg['url'], cfg['dir'])
-            temp_file = self.find_current_temp_file(cfg, it['meta'])
-            session_dict = None
-            if temp_file:
-                session_dict = {
-                    'session_id': session_id, 'url': cfg['url'],
-                    'output_path': cfg['dir'], 'temp_file': temp_file,
-                }
+    def download_now_flow(self):
+        u = self.run_safe(lambda: self.e_url.get().strip())
+        if not u:
+            return
+        if (u != self.last_analyzed_url) or (self.current_meta is None):
+            self.perform_analysis(u)
+            if "手动" in self.run_safe(self.seg_mode.get):
+                self.log("Select format first...", "happy")
+                return
+        cfg, _ = self.run_safe(self.build_current_config)
+        self.log("Direct downloading...", "working")
+        self.run_safe(lambda: [self.btn_now.configure(state="disabled"), self.btn_add.configure(state="disabled")])
 
-            ok = self.download_item_with_resume(cfg, it['meta'], session_dict)
+        session_id = self.generate_session_id(cfg['url'], cfg['dir'])
+        temp_file = self.find_current_temp_file(cfg, self.current_meta)
 
-            c, t = ("green", "Done") if ok else ("red", "Error")
-            self.run_safe(lambda: it['label'].configure(text=t, text_color=c))
-            it['status'] = 'done' if ok else 'error'
-            if ok:
-                self.mood_manager.download_success_today += 1
+        session_dict = None
+        if temp_file:
+            session_dict = {
+                'session_id': session_id, 'url': cfg['url'],
+                'output_path': cfg['dir'], 'temp_file': temp_file,
+            }
+            self.log("Detected partial file, attempting resume...", "working")
+
+        def _single_task():
+            ok = self.download_item_with_resume(cfg, self.current_meta, session_dict)
+            self.after(0, lambda: self._single_done(ok))
+
+        threading.Thread(target=_single_task, daemon=True).start()
+
+    def _single_done(self, ok):
+        self.btn_now.configure(state="normal")
+        self.btn_add.configure(state="normal")
+        if ok:
+            show_windows_toast("Neko", "Done!")
+            self.log("Done!", "done")
+            self.mood_manager.report_success()
+        else:
+            self.log("Failed.", "sad")
+            self.mood_manager.report_fail()
+        self.l_status.configure(text="待命中喵")
+        self.update_mood_display()
