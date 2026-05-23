@@ -22,12 +22,13 @@ class UIHelpersMixin:
     # ── UI state updates ────────────────────────────────────────
 
     def upd_ui(self, _=None):
-        st = "normal" if self.sw_proxy.get() else "disabled"
-        self.e_proxy_ip.configure(state=st)
-        self.e_proxy_port.configure(state=st)
+        if self.sw_proxy.get():
+            self.proxy_box.pack(side="left", padx=(8, 0))
+        else:
+            self.proxy_box.pack_forget()
 
         if self.switch_time.get():
-            self.cut_box.pack(side="left")
+            self.cut_box.pack(side="left", padx=(8, 0))
         else:
             self.cut_box.pack_forget()
 
@@ -113,9 +114,9 @@ class UIHelpersMixin:
 
     def update_browser_selector(self, *args):
         if self.c_cookie.get() == "🔄 使用内置提取器":
-            self.browser_frame.pack(fill="x", padx=20, pady=5, after=self.net)
+            self.browser_row.pack(fill="x", padx=10, pady=3)
         else:
-            self.browser_frame.pack_forget()
+            self.browser_row.pack_forget()
 
     # ── Chat filter ─────────────────────────────────────────────
 
