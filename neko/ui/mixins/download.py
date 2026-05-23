@@ -177,14 +177,22 @@ class DownloadMixin:
                 self.c_audio.set(a_labels[0])
             self.on_main_video_select(self.c_video.get())
 
-            if hasattr(self, 'c_subtitle'):
+            if hasattr(self, 'c_subtitle_manual'):
                 if self.subtitle_opts:
                     subtitle_labels = ["不下载字幕"] + [opt[1] for opt in self.subtitle_opts]
-                    self.c_subtitle.configure(values=subtitle_labels)
-                    self.c_subtitle.set("不下载字幕")
+                    self.c_subtitle_manual.configure(values=subtitle_labels)
+                    self.c_subtitle_manual.set("不下载字幕")
                 else:
-                    self.c_subtitle.configure(values=["不下载字幕"])
-                    self.c_subtitle.set("不下载字幕")
+                    self.c_subtitle_manual.configure(values=["不下载字幕"])
+                    self.c_subtitle_manual.set("不下载字幕")
+            if hasattr(self, 'c_subtitle_only'):
+                if self.subtitle_opts:
+                    subtitle_labels = [opt[1] for opt in self.subtitle_opts]
+                    self.c_subtitle_only.configure(values=subtitle_labels)
+                    self.c_subtitle_only.set(subtitle_labels[0])
+                else:
+                    self.c_subtitle_only.configure(values=["下载所有字幕"])
+                    self.c_subtitle_only.set("下载所有字幕")
 
             self.l_info.configure(text=f"Title: {d.get('title', '?')}\nUP: {d.get('uploader', '?')}")
             if 'entries' in d or d.get('_type') == 'playlist':

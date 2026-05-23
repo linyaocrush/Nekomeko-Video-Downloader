@@ -22,7 +22,7 @@ class ResumeMixin:
             filename = template.replace('%(title)s', title)
         else:
             filename = meta.get('title', 'Unknown')
-        filename = re.sub(r'[\\/*?:"<>|]', "", filename)
+        filename = re.sub(r'[\\/*?:"<>|\[\]]', "", filename)
         return os.path.join(cfg['dir'], filename)
 
     def find_current_temp_file(self, cfg, meta):

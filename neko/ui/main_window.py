@@ -187,14 +187,10 @@ class NekoDownloader(DownloadMixin, QueueMixin, ResumeMixin, UIHelpersMixin, ctk
                 return res[0]
             except Exception as e:
                 logger.error(f"使用after执行函数错误: {e}")
-                return func(*args, **kwargs)
+                return None
         except Exception as e:
             logger.error(f"run_safe 错误: {e}")
-            try:
-                return func(*args, **kwargs)
-            except Exception as e2:
-                logger.error(f"直接执行函数也失败: {e2}")
-                return None
+            return None
 
     # ── Mood ────────────────────────────────────────────────────
 

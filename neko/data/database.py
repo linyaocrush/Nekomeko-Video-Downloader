@@ -117,10 +117,11 @@ class NekoDB:
             self.conn.commit()
 
     def get_pending_resume_sessions(self):
-        self.cursor.execute(
-            "SELECT * FROM resume_sessions WHERE status = 'active' ORDER BY last_update DESC"
-        )
-        return self.cursor.fetchall()
+        with self.lock:
+            self.cursor.execute(
+                "SELECT * FROM resume_sessions WHERE status = 'active' ORDER BY last_update DESC"
+            )
+            return self.cursor.fetchall()
 
     def complete_resume_session(self, session_id):
         with self.lock:
@@ -163,18 +164,20 @@ class NekoDB:
                 return False
 
     def get_today_count(self):
-        try:
-            today = datetime.datetime.now().strftime("%Y-%m-%d")
-            self.cursor.execute("SELECT COUNT(*) FROM downloads WHERE date(download_date) = ?", (today,))
-            return self.cursor.fetchone()[0]
-        except Exception:
-            return 0
+        with self.lock:
+            try:
+                today = datetime.datetime.now().strftime("%Y-%m-%d")
+                self.cursor.execute("SELECT COUNT(*) FROM downloads WHERE date(download_date) = ?", (today,))
+                return self.cursor.fetchone()[0]
+            except Exception:
+                return 0
 
     def get_full_stats(self):
-        self.cursor.execute(
-            "SELECT file_size, download_date, elapsed_seconds, duration, webpage_url FROM downloads"
-        )
-        rows = self.cursor.fetchall()
+        with self.lock:
+            self.cursor.execute(
+                "SELECT file_size, download_date, elapsed_seconds, duration, webpage_url FROM downloads"
+            )
+            rows = self.cursor.fetchall()
         stats = {
             "total_count": len(rows),
             "total_size": sum(r[0] for r in rows if r[0]),
@@ -226,39 +229,42 @@ class NekoDB:
         return stats
 
     def get_top_uploaders(self, limit=5):
-        self.cursor.execute(
-            'SELECT uploader, COUNT(*) as count FROM downloads GROUP BY uploader ORDER BY count DESC LIMIT ?',
-            (limit,),
-        )
-        return self.cursor.fetchall()
+        with self.lock:
+            self.cursor.execute(
+                'SELECT uploader, COUNT(*) as count FROM downloads GROUP BY uploader ORDER BY count DESC LIMIT ?',
+                (limit,),
+            )
+            return self.cursor.fetchall()
 
     def get_all_uploaders(self):
-        self.cursor.execute("SELECT DISTINCT uploader FROM downloads ORDER BY uploader")
-        return [r[0] for r in self.cursor.fetchall() if r[0]]
+        with self.lock:
+            self.cursor.execute("SELECT DISTINCT uploader FROM downloads ORDER BY uploader")
+            return [r[0] for r in self.cursor.fetchall() if r[0]]
 
     def search_history(self, keyword="", uploader_filter="全部",
                        platform_filter="全部", limit=50) -> List[HistoryRecord]:
-        sql = "SELECT * FROM downloads WHERE 1=1"
-        params: list = []
-        if keyword:
-            sql += " AND title LIKE ?"
-            params.append(f"%{keyword}%")
-        if uploader_filter and uploader_filter != "全部":
-            sql += " AND uploader = ?"
-            params.append(uploader_filter)
-        if platform_filter and platform_filter != "全部":
-            if platform_filter == "B站 (Bilibili)":
-                sql += " AND webpage_url LIKE '%bilibili%'"
-            elif platform_filter == "油管 (YouTube)":
-                sql += " AND (webpage_url LIKE '%youtube%' OR webpage_url LIKE '%youtu.be%')"
-            elif platform_filter == "抖音 (Douyin)":
-                sql += " AND webpage_url LIKE '%douyin%'"
-            elif platform_filter == "推特 (X)":
-                sql += " AND (webpage_url LIKE '%twitter%' OR webpage_url LIKE '%x.com%')"
-        sql += " ORDER BY download_date DESC LIMIT ?"
-        params.append(limit)
-        self.cursor.execute(sql, tuple(params))
-        rows = self.cursor.fetchall()
+        with self.lock:
+            sql = "SELECT * FROM downloads WHERE 1=1"
+            params: list = []
+            if keyword:
+                sql += " AND title LIKE ?"
+                params.append(f"%{keyword}%")
+            if uploader_filter and uploader_filter != "全部":
+                sql += " AND uploader = ?"
+                params.append(uploader_filter)
+            if platform_filter and platform_filter != "全部":
+                if platform_filter == "B站 (Bilibili)":
+                    sql += " AND webpage_url LIKE '%bilibili%'"
+                elif platform_filter == "油管 (YouTube)":
+                    sql += " AND (webpage_url LIKE '%youtube%' OR webpage_url LIKE '%youtu.be%')"
+                elif platform_filter == "抖音 (Douyin)":
+                    sql += " AND webpage_url LIKE '%douyin%'"
+                elif platform_filter == "推特 (X)":
+                    sql += " AND (webpage_url LIKE '%twitter%' OR webpage_url LIKE '%x.com%')"
+            sql += " ORDER BY download_date DESC LIMIT ?"
+            params.append(limit)
+            self.cursor.execute(sql, tuple(params))
+            rows = self.cursor.fetchall()
         records = []
         for r in rows:
             try:

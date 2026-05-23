@@ -27,12 +27,14 @@ def safe_run(func):
 def show_windows_toast(title, msg):
     """Show a Windows toast notification in a background thread."""
     def _run():
+        safe_title = title.replace("'", "''")
+        safe_msg = msg.replace("'", "''")
         ps_script = f"""
         [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] > $null
         $template = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02)
         $textNodes = $template.GetElementsByTagName("text")
-        $textNodes.Item(0).AppendChild($template.CreateTextNode('{title}')) > $null
-        $textNodes.Item(1).AppendChild($template.CreateTextNode('{msg}')) > $null
+        $textNodes.Item(0).AppendChild($template.CreateTextNode('{safe_title}')) > $null
+        $textNodes.Item(1).AppendChild($template.CreateTextNode('{safe_msg}')) > $null
         $notifier = [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("Neko Downloader")
         $notification = [Windows.UI.Notifications.ToastNotification, Windows.UI.Notifications, ContentType = WindowsRuntime]::new($template)
         $notifier.Show($notification)

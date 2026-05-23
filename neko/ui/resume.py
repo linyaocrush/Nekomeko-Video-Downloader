@@ -84,9 +84,9 @@ class ResumeManagerWindow(ctk.CTkToplevel):
         try:
             download_params = json.loads(session[7]) if session[7] else {}
             if not os.path.exists(session[3]):
-                pass
+                messagebox.showwarning("续传失败", f"临时文件不存在:\n{session[3]}")
+                return
             threading.Thread(target=self.parent.start_resume_download, args=(session, download_params), daemon=True).start()
-            self.destroy()
         except Exception as e:
             messagebox.showerror("续传失败", f"续传失败: {str(e)}")
 
