@@ -125,11 +125,12 @@ class LoadingScreen(ctk.CTkToplevel):
         try:
             self.cancel_all_after()
             self.withdraw()
+            # Process remaining after() callbacks to prevent "invalid command name" warnings
+            self.update_idletasks()
             self.quit()
             self.destroy()
-            time.sleep(0.1)
-        except Exception as e:
-            logger.error(f"彻底关闭加载屏时发生意外: {e}")
+        except Exception:
+            pass  # TclError from already-destroyed widgets is expected
 
 
 class UILoader:
