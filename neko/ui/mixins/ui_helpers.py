@@ -6,10 +6,11 @@ import subprocess
 import shutil
 import logging
 
+import webbrowser
 import customtkinter as ctk
 from tkinter import messagebox
 
-from ...core.constants import FONT_N, FONT_S, COOKIES_DIR
+from ...core.constants import FONT_N, FONT_B, FONT_S, COOKIES_DIR
 from ...core.utils import safe_run
 from ...core import constants as _c
 
@@ -260,15 +261,10 @@ class UIHelpersMixin:
                 if cache_cleared:
                     self.log("Cache cleared.", "happy")
                 if not y_ok or not f_ok:
-                    msg = []
-                    if not y_ok:
-                        msg.append("yt-dlp")
-                    if not f_ok:
-                        msg.append("ffmpeg")
-                    self.log(f"Missing core: {', '.join(msg)}", "sad")
+                    self.log("未找到核心组件，正在打开提示...", "sad")
                     if hasattr(self, 'l_version'):
-                        self.l_version.configure(text="Core Missing", text_color="red")
-                    self.after(0, lambda: [messagebox.showwarning("Missing", f"Missing: {', '.join(msg)}"), self.open_settings_window()])
+                        self.l_version.configure(text="组件缺失", text_color="red")
+                    self.after(0, lambda: self._show_missing_dialog(y_ok, f_ok))
                     return
                 if hasattr(self, 'l_version'):
                     if version_info:
@@ -285,3 +281,31 @@ class UIHelpersMixin:
             self.run_safe(update_ui)
         except Exception as e:
             logger.error(f"执行UI更新错误: {e}")
+
+    def _show_missing_dialog(self, y_ok, f_ok):
+        missing = []
+        if not y_ok:
+            missing.append(("yt-dlp", "https://github.com/yt-dlp/yt-dlp/releases"))
+        if not f_ok:
+            missing.append(("ffmpeg", "https://github.com/BtbN/FFmpeg-Builds/releases"))
+
+        names = "、".join(n for n, _ in missing)
+        win = ctk.CTkToplevel(self)
+        win.title("组件缺失")
+        win.geometry("480x260")
+        win.transient(self)
+        win.grab_set()
+        win.configure(fg_color=_c.CURRENT_THEME["main_bg"])
+
+        ctk.CTkLabel(win, text="⚠️ 未找到以下核心组件", font=FONT_B, text_color="red").pack(pady=(20, 5))
+        ctk.CTkLabel(win, text=f"猫娘找不到 {names}，无法抓视频小老鼠…", font=FONT_N, text_color=_c.CURRENT_THEME["text"]).pack(pady=(0, 15))
+
+        for name, url in missing:
+            row = ctk.CTkFrame(win, fg_color="transparent")
+            row.pack(fill="x", padx=30, pady=4)
+            ctk.CTkLabel(row, text=f"❌ {name}", font=FONT_N, width=120, anchor="w", text_color=_c.CURRENT_THEME["text"]).pack(side="left")
+            ctk.CTkButton(row, text="📥 前往下载", width=100, fg_color="#9370DB", command=lambda u=url: webbrowser.open(u)).pack(side="right")
+            ctk.CTkLabel(row, text="或放入程序根目录", font=FONT_S, text_color="gray").pack(side="right", padx=8)
+
+        ctk.CTkButton(win, text="⚙️ 打开设置手动指定路径", width=200, fg_color=_c.CURRENT_THEME["accent"], command=lambda: [win.destroy(), self.open_settings_window()]).pack(pady=(15, 5))
+        ctk.CTkLabel(win, text="💡 也可将 exe 放入程序根目录后重启", font=FONT_S, text_color="gray").pack(pady=(0, 10))
