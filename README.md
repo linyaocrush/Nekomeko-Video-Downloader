@@ -11,6 +11,8 @@
 ![License](https://img.shields.io/badge/License-MIT-FFA500?style=for-the-badge)
 ![Platform](https://img.shields.io/badge/Platform-Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white)
 
+[![Release](https://img.shields.io/github/v/release/linyaocrush/Nekomeko-Video-Downloader?style=for-the-badge&color=FF69B4)](https://github.com/linyaocrush/Nekomeko-Video-Downloader/releases/latest)
+
 </div>
 
 ---
@@ -68,18 +70,47 @@
 
 ## 🚀 快速开始
 
-### 环境要求
+### 下载打包版（推荐）
+
+前往 [Releases](https://github.com/linyaocrush/Nekomeko-Video-Downloader/releases/latest) 下载：
+
+| 版本 | 说明 |
+|------|------|
+| `*-single.exe` | 单文件版，双击即用 |
+| `*-portable.zip` | 绿色免安装版，解压后运行 `Nekomeko.exe` |
+
+> 两个版本都需要系统已安装 [yt-dlp](https://github.com/yt-dlp/yt-dlp) 和 [ffmpeg](https://ffmpeg.org/) 并加入 PATH
+
+#### 安装 yt-dlp 与 ffmpeg
+
+```bash
+# yt-dlp — 视频下载核心
+# 方式一：pip 安装
+pip install yt-dlp
+# 方式二：下载 exe 放入 PATH
+# https://github.com/yt-dlp/yt-dlp/releases
+
+# ffmpeg — 音视频合并（可选但推荐）
+# 下载地址：https://github.com/BtbN/FFmpeg-Builds/releases
+# 下载 ffmpeg-master-latest-win64-gpl.zip，解压后将 bin/ 目录加入系统 PATH
+
+# 💡 也可以将 yt-dlp.exe / ffmpeg.exe 直接放在程序根目录，无需加入 PATH
+```
+
+### 从源码运行
+
+#### 环境要求
 
 - **Python** 3.12 或更高版本
 - **yt-dlp** （视频下载核心）
 - **ffmpeg** （音视频合并，可选）
 
-### 安装与运行
+#### 安装与运行
 
 ```bash
 # 1. 克隆仓库
-git clone https://github.com/your-username/neko-downloader.git
-cd neko-downloader
+git clone https://github.com/linyaocrush/Nekomeko-Video-Downloader.git
+cd Nekomeko-Video-Downloader
 
 # 2. 创建虚拟环境并安装依赖
 python -m venv venv

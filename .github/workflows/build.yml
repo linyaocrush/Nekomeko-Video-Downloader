@@ -1,0 +1,86 @@
+name: Build & Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '版本号 (如 v1.0.0)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt pyinstaller
+
+      - name: Build single-file
+        run: >
+          pyinstaller
+          --noconfirm
+          --onefile
+          --windowed
+          --name Nekomeko
+          --add-data "neko;neko"
+          --hidden-import customtkinter
+          --hidden-import pydantic
+          --hidden-import PIL
+          --collect-submodules customtkinter
+          neko/main.py
+
+      - name: Rename single-file artifact
+        run: move dist\Nekomeko.exe dist\Nekomeko-${{ github.event.inputs.version }}-single.exe
+
+      - name: Build portable
+        run: >
+          pyinstaller
+          --noconfirm
+          --onedir
+          --windowed
+          --name Nekomeko
+          --add-data "neko;neko"
+          --hidden-import customtkinter
+          --hidden-import pydantic
+          --hidden-import PIL
+          --collect-submodules customtkinter
+          neko/main.py
+
+      - name: Rename portable folder
+        run: move dist\Nekomeko dist\Nekomeko-${{ github.event.inputs.version }}-portable
+
+      - name: Copy run.bat into portable
+        run: copy run.bat dist\Nekomeko-${{ github.event.inputs.version }}-portable\
+
+      - name: Copy requirements.txt into portable
+        run: copy requirements.txt dist\Nekomeko-${{ github.event.inputs.version }}-portable\
+
+      - name: Zip portable
+        run: Compress-Archive -Path dist\Nekomeko-${{ github.event.inputs.version }}-portable -DestinationPath dist\Nekomeko-${{ github.event.inputs.version }}-portable.zip
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.version }}
+          name: Nekomeko ${{ github.event.inputs.version }}
+          body: |
+            ## 🐾 猫娘视频下载器 ${{ github.event.inputs.version }}
+
+            ### 下载说明
+            - **单文件版** — 双击即用，体积较大但只有一个 exe
+            - **绿色免安装版** — 解压后运行 `Nekomeko.exe`，启动更快
+
+            > ⚠️ 两个版本都需要系统已安装 [yt-dlp](https://github.com/yt-dlp/yt-dlp) 和 [ffmpeg](https://ffmpeg.org/)
+          files: |
+            dist/Nekomeko-${{ github.event.inputs.version }}-single.exe
+            dist/Nekomeko-${{ github.event.inputs.version }}-portable.zip
+          draft: false
+          prerelease: false
