@@ -1,6 +1,4 @@
 import threading
-import time
-import logging
 
 import customtkinter as ctk
 import tkinter as tk
@@ -8,8 +6,6 @@ import tkinter as tk
 from ...core.constants import FONT_Q_TITLE, FONT_Q_DESC
 from ...core.utils import safe_run, show_windows_toast
 from ...core import constants as _c
-
-logger = logging.getLogger(__name__)
 
 
 class QueueMixin:

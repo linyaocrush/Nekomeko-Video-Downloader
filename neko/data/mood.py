@@ -1,9 +1,6 @@
 import time
 import datetime
 import random
-import logging
-
-logger = logging.getLogger(__name__)
 
 
 class NekoMoodManager:

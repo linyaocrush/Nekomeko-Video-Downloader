@@ -56,17 +56,14 @@ class NekoDB:
         self.conn.commit()
 
     def upgrade_table(self):
-        try:
-            self.cursor.execute("ALTER TABLE downloads ADD COLUMN duration INTEGER DEFAULT 0")
-        except Exception:
-            pass
-        try:
-            self.cursor.execute("ALTER TABLE downloads ADD COLUMN elapsed_seconds REAL DEFAULT 0")
-        except Exception:
-            pass
-        self.cursor.execute('CREATE INDEX IF NOT EXISTS idx_uploader ON downloads (uploader)')
-        self.cursor.execute('CREATE INDEX IF NOT EXISTS idx_date ON downloads (download_date)')
-        self.cursor.execute('CREATE INDEX IF NOT EXISTS idx_url ON downloads (webpage_url)')
+        for col, default in [
+            ("duration", "INTEGER DEFAULT 0"),
+            ("elapsed_seconds", "REAL DEFAULT 0"),
+        ]:
+            try:
+                self.cursor.execute(f"ALTER TABLE downloads ADD COLUMN {col} {default}")
+            except Exception:
+                pass
         self.conn.commit()
 
     def upgrade_resume_support(self):
@@ -124,9 +121,7 @@ class NekoDB:
             return self.cursor.fetchall()
 
     def complete_resume_session(self, session_id):
-        with self.lock:
-            self.cursor.execute("DELETE FROM resume_sessions WHERE session_id = ?", (session_id,))
-            self.conn.commit()
+        self.delete_resume_session(session_id)
 
     def delete_resume_session(self, session_id):
         with self.lock:

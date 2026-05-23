@@ -1,5 +1,9 @@
 import os
+import subprocess
 import customtkinter as ctk
+
+# ── Subprocess flags for hiding console windows on Windows ──────
+SUBPROCESS_FLAGS = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
 
 # ── Directory paths ──────────────────────────────────────────────
 DATA_DIR = "data"

@@ -3,8 +3,6 @@ import logging
 import tkinter as tk
 from tkinter import messagebox
 
-import customtkinter as ctk
-
 from .core.cache import CacheManager
 from .ui.loading import UILoader
 

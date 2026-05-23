@@ -1,15 +1,12 @@
 import os
 import json
 import threading
-import logging
 from tkinter import messagebox
 
 import customtkinter as ctk
 
 from ..core.constants import FONT_N, FONT_B, FONT_T, FONT_S
 from ..core import constants as _c
-
-logger = logging.getLogger(__name__)
 
 
 class ResumeManagerWindow(ctk.CTkToplevel):

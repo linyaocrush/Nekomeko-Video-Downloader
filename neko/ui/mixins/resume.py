@@ -3,9 +3,6 @@ import re
 import glob
 import hashlib
 import datetime
-import logging
-
-logger = logging.getLogger(__name__)
 
 
 class ResumeMixin:

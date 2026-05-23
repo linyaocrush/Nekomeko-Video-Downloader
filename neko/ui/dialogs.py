@@ -10,8 +10,8 @@ from tkinter import messagebox, colorchooser, filedialog
 import customtkinter as ctk
 
 from ..core.constants import (
-    FONT_N, FONT_B, FONT_T, FONT_S, FONT_LOG,
-    DEFAULT_PRESETS, BASE_THEME_TEMPLATE, COOKIES_DIR,
+    FONT_N, FONT_B, FONT_S, FONT_LOG,
+    DEFAULT_PRESETS, BASE_THEME_TEMPLATE,
 )
 from ..core import constants as _c
 from ..core.theme import ThemeManager

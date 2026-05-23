@@ -7,7 +7,6 @@ import json
 import subprocess
 import os
 import shutil
-import sys
 
 import customtkinter as ctk
 from tkinter import messagebox
@@ -19,7 +18,6 @@ class LoadingScreen(ctk.CTkToplevel):
     def __init__(self, parent):
         super().__init__(parent)
         self.title("猫娘视频下载器 - 加载中...")
-        self.geometry("400x300")
         self.configure(fg_color="#FFF0F5")
         self.overrideredirect(True)
 
@@ -129,8 +127,7 @@ class LoadingScreen(ctk.CTkToplevel):
             self.withdraw()
             self.quit()
             self.destroy()
-            import time as _t
-            _t.sleep(0.1)
+            time.sleep(0.1)
         except Exception as e:
             logger.error(f"彻底关闭加载屏时发生意外: {e}")
 

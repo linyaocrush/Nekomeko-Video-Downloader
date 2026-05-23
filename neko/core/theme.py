@@ -6,7 +6,7 @@ import logging
 import customtkinter as ctk
 
 from .constants import (
-    THEMES_DIR, ACTIVE_THEME_FILE, BASE_THEME_TEMPLATE, DEFAULT_PRESETS, CURRENT_THEME,
+    THEMES_DIR, ACTIVE_THEME_FILE, BASE_THEME_TEMPLATE, DEFAULT_PRESETS,
 )
 
 logger = logging.getLogger(__name__)

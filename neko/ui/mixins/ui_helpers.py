@@ -8,7 +8,6 @@ import logging
 
 import webbrowser
 import customtkinter as ctk
-from tkinter import messagebox
 
 from ...core.constants import FONT_N, FONT_B, FONT_S, COOKIES_DIR
 from ...core.utils import safe_run
@@ -41,34 +40,26 @@ class UIHelpersMixin:
             if "字幕" in m:
                 self.c_video.pack_forget()
                 self.c_audio.pack_forget()
-                if hasattr(self, 'c_subtitle_manual'):
-                    self.c_subtitle_manual.pack_forget()
-                if hasattr(self, 'c_subtitle_only'):
-                    self.c_subtitle_only.pack(fill="x", padx=10, pady=5)
-                    if hasattr(self, 'subtitle_opts'):
-                        if self.subtitle_opts:
-                            subtitle_labels = [opt[1] for opt in self.subtitle_opts]
-                            self.c_subtitle_only.configure(values=subtitle_labels)
-                            self.c_subtitle_only.set(subtitle_labels[0])
-                        else:
-                            self.c_subtitle_only.configure(values=["下载所有字幕"])
-                            self.c_subtitle_only.set("下载所有字幕")
+                self.c_subtitle_manual.pack_forget()
+                self.c_subtitle_only.pack(fill="x", padx=10, pady=5)
+                if getattr(self, 'subtitle_opts', None):
+                    sub_labels = [opt[1] for opt in self.subtitle_opts]
+                    self.c_subtitle_only.configure(values=sub_labels)
+                    self.c_subtitle_only.set(sub_labels[0])
+                else:
+                    self.c_subtitle_only.configure(values=["下载所有字幕"])
+                    self.c_subtitle_only.set("下载所有字幕")
             else:
-                if hasattr(self, 'c_video'):
-                    self.c_video.pack(fill="x", padx=10, pady=5)
-                if hasattr(self, 'c_audio'):
-                    self.c_audio.pack(fill="x", padx=10, pady=5)
-                if hasattr(self, 'c_subtitle_only'):
-                    self.c_subtitle_only.pack_forget()
-                if hasattr(self, 'c_subtitle_manual'):
-                    self.c_subtitle_manual.pack(fill="x", padx=10, pady=5)
-                    if hasattr(self, 'subtitle_opts') and self.subtitle_opts:
-                        subtitle_labels = ["不下载字幕", "下载全部字幕"] + [opt[1] for opt in self.subtitle_opts]
-                        self.c_subtitle_manual.configure(values=subtitle_labels)
-                        self.c_subtitle_manual.set("不下载字幕")
-                    else:
-                        self.c_subtitle_manual.configure(values=["不下载字幕", "下载全部字幕"])
-                        self.c_subtitle_manual.set("不下载字幕")
+                self.c_video.pack(fill="x", padx=10, pady=5)
+                self.c_audio.pack(fill="x", padx=10, pady=5)
+                self.c_subtitle_only.pack_forget()
+                self.c_subtitle_manual.pack(fill="x", padx=10, pady=5)
+                if getattr(self, 'subtitle_opts', None):
+                    sub_labels = ["不下载字幕", "下载全部字幕"] + [opt[1] for opt in self.subtitle_opts]
+                    self.c_subtitle_manual.configure(values=sub_labels)
+                else:
+                    self.c_subtitle_manual.configure(values=["不下载字幕", "下载全部字幕"])
+                self.c_subtitle_manual.set("不下载字幕")
                 self.c_video.configure(state=st)
                 self.c_audio.configure(state=st)
         else:
@@ -262,18 +253,15 @@ class UIHelpersMixin:
                     self.log("Cache cleared.", "happy")
                 if not y_ok or not f_ok:
                     self.log("未找到核心组件，正在打开提示...", "sad")
-                    if hasattr(self, 'l_version'):
-                        self.l_version.configure(text="组件缺失", text_color="red")
+                    self.l_version.configure(text="组件缺失", text_color=_c.CURRENT_THEME["error"])
                     self.after(0, lambda: self._show_missing_dialog(y_ok, f_ok))
                     return
-                if hasattr(self, 'l_version'):
-                    if version_info:
-                        self.l_version.configure(text=f"Core: {version_info}", text_color=_c.CURRENT_THEME["accent"])
-                    else:
-                        self.l_version.configure(text="Unknown Ver", text_color="gray")
+                if version_info:
+                    self.l_version.configure(text=f"Core: {version_info}", text_color=_c.CURRENT_THEME["accent"])
+                else:
+                    self.l_version.configure(text="Unknown Ver", text_color=_c.CURRENT_THEME["on_surface_variant"])
                 self.mood_manager.update_logic()
-                if hasattr(self, 'update_mood_display'):
-                    self.update_mood_display()
+                self.update_mood_display()
             except Exception as e:
                 logger.error(f"更新UI错误: {e}")
 

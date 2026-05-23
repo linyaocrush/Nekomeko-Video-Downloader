@@ -4,14 +4,13 @@ import time
 import threading
 import logging
 import webbrowser
-from concurrent.futures import ThreadPoolExecutor
 
 import customtkinter as ctk
 import tkinter as tk
 
 from ..core.constants import (
     FONT_N, FONT_B, FONT_T, FONT_S, FONT_LOG,
-    CFG_FILE, COOKIES_DIR,
+    CFG_FILE,
 )
 from ..data.database import NekoDB
 from ..data.mood import NekoMoodManager
@@ -36,8 +35,6 @@ class NekoDownloader(DownloadMixin, QueueMixin, ResumeMixin, UIHelpersMixin, ctk
         self.geometry("1150x900")
         self.configure(fg_color=_c.CURRENT_THEME["main_bg"])
         self.protocol("WM_DELETE_WINDOW", self.on_close)
-
-        self.thread_pool = ThreadPoolExecutor(max_workers=4)
 
         if cached_data:
             self.restore_from_cache(cached_data)
@@ -67,8 +64,6 @@ class NekoDownloader(DownloadMixin, QueueMixin, ResumeMixin, UIHelpersMixin, ctk
         self.start_thread(self.startup_maintenance)
         self.start_thread(self.check_mood_loop)
 
-        self.last_saved_bytes = 0
-
     # ── Lifecycle ───────────────────────────────────────────────
 
     def restore_from_cache(self, cached_data):
@@ -96,9 +91,6 @@ class NekoDownloader(DownloadMixin, QueueMixin, ResumeMixin, UIHelpersMixin, ctk
         thread = threading.Thread(target=target, args=args, kwargs=kwargs, daemon=True)
         thread.start()
         return thread
-
-    def submit_async_task(self, func, *args, **kwargs):
-        return self.thread_pool.submit(func, *args, **kwargs)
 
     def load_cfg(self):
         d = {
@@ -136,9 +128,9 @@ class NekoDownloader(DownloadMixin, QueueMixin, ResumeMixin, UIHelpersMixin, ctk
             "sponsor_cats": self.current_sponsor_cats,
             "tmpl_on": self.cfg["tmpl_on"], "tmpl_str": self.cfg["tmpl_str"],
             "ytdlp_path": self.cfg.get("ytdlp_path", ""), "ffmpeg_path": self.cfg.get("ffmpeg_path", ""),
-            "chat_mode": self.chat_mode_var.get() if hasattr(self, 'chat_mode_var') else "full",
-            "chat_filters": self.chat_filters if hasattr(self, 'chat_filters') else ["author", "message", "timestamp"],
-            "time_range_on": self.switch_time.get() if hasattr(self, 'switch_time') else False,
+            "chat_mode": self.chat_mode_var.get(),
+            "chat_filters": self.chat_filters,
+            "time_range_on": self.switch_time.get(),
             "start_h": self.e_start_h.get(), "start_m": self.e_start_m.get(), "start_s": self.e_start_s.get(),
             "end_h": self.e_end_h.get(), "end_m": self.e_end_m.get(), "end_s": self.e_end_s.get(),
         }
@@ -206,8 +198,7 @@ class NekoDownloader(DownloadMixin, QueueMixin, ResumeMixin, UIHelpersMixin, ctk
 
                 def update_display():
                     try:
-                        if hasattr(self, 'update_mood_display') and hasattr(self, 'header_tip'):
-                            self.update_mood_display()
+                        self.update_mood_display()
                     except Exception as e:
                         logger.error(f"更新心情显示错误: {e}")
 
@@ -383,23 +374,15 @@ class NekoDownloader(DownloadMixin, QueueMixin, ResumeMixin, UIHelpersMixin, ctk
             e.insert(0, val)
             return e
 
-        self.e_start_h = mk_time_entry(self.cut_box, self.cfg.get("start_h", "00"))
-        self.e_start_h.pack(side="left")
-        ctk.CTkLabel(self.cut_box, text=":", text_color=_c.CURRENT_THEME["text"]).pack(side="left")
-        self.e_start_m = mk_time_entry(self.cut_box, self.cfg.get("start_m", "00"))
-        self.e_start_m.pack(side="left")
-        ctk.CTkLabel(self.cut_box, text=":", text_color=_c.CURRENT_THEME["text"]).pack(side="left")
-        self.e_start_s = mk_time_entry(self.cut_box, self.cfg.get("start_s", "00"))
-        self.e_start_s.pack(side="left")
-        ctk.CTkLabel(self.cut_box, text=" 至 ", font=FONT_S, text_color=_c.CURRENT_THEME["text"]).pack(side="left", padx=5)
-        self.e_end_h = mk_time_entry(self.cut_box, self.cfg.get("end_h", "00"))
-        self.e_end_h.pack(side="left")
-        ctk.CTkLabel(self.cut_box, text=":", text_color=_c.CURRENT_THEME["text"]).pack(side="left")
-        self.e_end_m = mk_time_entry(self.cut_box, self.cfg.get("end_m", "00"))
-        self.e_end_m.pack(side="left")
-        ctk.CTkLabel(self.cut_box, text=":", text_color=_c.CURRENT_THEME["text"]).pack(side="left")
-        self.e_end_s = mk_time_entry(self.cut_box, self.cfg.get("end_s", "00"))
-        self.e_end_s.pack(side="left")
+        for prefix, keys in [("start", ("start_h", "start_m", "start_s")), ("end", ("end_h", "end_m", "end_s"))]:
+            if prefix == "end":
+                ctk.CTkLabel(self.cut_box, text=" 至 ", font=FONT_S, text_color=_c.CURRENT_THEME["text"]).pack(side="left", padx=5)
+            for i, key in enumerate(keys):
+                entry = mk_time_entry(self.cut_box, self.cfg.get(key, "00"))
+                entry.pack(side="left")
+                setattr(self, f"e_{key}", entry)
+                if i < 2:
+                    ctk.CTkLabel(self.cut_box, text=":", text_color=_c.CURRENT_THEME["text"]).pack(side="left")
 
         resume_frame = ctk.CTkFrame(self.left_panel, fg_color="transparent")
         resume_frame.pack(fill="x", padx=20, pady=5)

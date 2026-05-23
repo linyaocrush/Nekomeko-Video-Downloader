@@ -31,7 +31,3 @@ class HistoryRecord(BaseModel):
     @property
     def size_mb(self) -> float:
         return self.file_size / (1024 * 1024)
-
-    @property
-    def speed_mb_s(self) -> float:
-        return (self.size_mb / self.elapsed_seconds) if self.elapsed_seconds > 0 else 0.0

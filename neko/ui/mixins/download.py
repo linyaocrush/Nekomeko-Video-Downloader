@@ -13,7 +13,6 @@ import customtkinter as ctk
 from PIL import Image
 
 from ...core.utils import safe_run, show_windows_toast
-from ...core import constants as _c
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +29,7 @@ class DownloadMixin:
             cmd.extend(["--proxy", f"http://{pip}:{ppt}"])
         if "🚫" not in ck:
             if ck == "🔄 使用内置提取器":
-                browser = self.c_browser.get() if hasattr(self, 'c_browser') else "chrome"
+                browser = self.c_browser.get()
                 cmd.extend(["--cookies-from-browser", browser])
             else:
                 from ...core.constants import COOKIES_DIR
@@ -177,22 +176,17 @@ class DownloadMixin:
                 self.c_audio.set(a_labels[0])
             self.on_main_video_select(self.c_video.get())
 
-            if hasattr(self, 'c_subtitle_manual'):
-                if self.subtitle_opts:
-                    subtitle_labels = ["不下载字幕"] + [opt[1] for opt in self.subtitle_opts]
-                    self.c_subtitle_manual.configure(values=subtitle_labels)
-                    self.c_subtitle_manual.set("不下载字幕")
-                else:
-                    self.c_subtitle_manual.configure(values=["不下载字幕"])
-                    self.c_subtitle_manual.set("不下载字幕")
-            if hasattr(self, 'c_subtitle_only'):
-                if self.subtitle_opts:
-                    subtitle_labels = [opt[1] for opt in self.subtitle_opts]
-                    self.c_subtitle_only.configure(values=subtitle_labels)
-                    self.c_subtitle_only.set(subtitle_labels[0])
-                else:
-                    self.c_subtitle_only.configure(values=["下载所有字幕"])
-                    self.c_subtitle_only.set("下载所有字幕")
+            if self.subtitle_opts:
+                sub_labels = [opt[1] for opt in self.subtitle_opts]
+                self.c_subtitle_manual.configure(values=["不下载字幕"] + sub_labels)
+                self.c_subtitle_manual.set("不下载字幕")
+                self.c_subtitle_only.configure(values=sub_labels)
+                self.c_subtitle_only.set(sub_labels[0])
+            else:
+                self.c_subtitle_manual.configure(values=["不下载字幕"])
+                self.c_subtitle_manual.set("不下载字幕")
+                self.c_subtitle_only.configure(values=["下载所有字幕"])
+                self.c_subtitle_only.set("下载所有字幕")
 
             self.l_info.configure(text=f"Title: {d.get('title', '?')}\nUP: {d.get('uploader', '?')}")
             if 'entries' in d or d.get('_type') == 'playlist':
@@ -222,40 +216,28 @@ class DownloadMixin:
         if "手动" in m and self.c_audio.cget("state") == "disabled":
             aid = None
 
-        if not hasattr(self, 'current_meta') or self.current_meta is None:
+        if self.current_meta is None:
             self.current_meta = {
                 "title": "Unknown Video", "uploader": "Unknown Uploader",
-                "webpage_url": self.e_url.get() if hasattr(self, 'e_url') else "",
-                "formats": [], "thumbnail": None,
+                "webpage_url": self.e_url.get(), "formats": [], "thumbnail": None,
             }
 
-        selected_subtitle = ""
         is_subtitle_mode = "字幕" in m
         if is_subtitle_mode:
-            selected_subtitle = self.c_subtitle_only.get() if hasattr(self, 'c_subtitle_only') else "下载所有字幕"
+            selected_subtitle = self.c_subtitle_only.get()
         else:
-            selected_subtitle = self.c_subtitle_manual.get() if hasattr(self, 'c_subtitle_manual') else "不下载字幕"
+            selected_subtitle = self.c_subtitle_manual.get()
 
         subtitle_lang = None
-        if not is_subtitle_mode:
-            if selected_subtitle == "不下载字幕":
-                subtitle_lang = None
-            elif selected_subtitle == "下载全部字幕":
-                subtitle_lang = "all"
-            else:
-                if hasattr(self, 'subtitle_opts') and self.subtitle_opts:
-                    for lang_code, label, is_auto in self.subtitle_opts:
-                        if label == selected_subtitle:
-                            subtitle_lang = lang_code
-                            break
-        else:
-            if hasattr(self, 'subtitle_opts') and self.subtitle_opts:
-                for lang_code, label, is_auto in self.subtitle_opts:
-                    if label == selected_subtitle:
-                        subtitle_lang = lang_code
-                        break
+        if selected_subtitle == "下载全部字幕":
+            subtitle_lang = "all"
+        elif selected_subtitle != "不下载字幕":
+            for lang_code, label, _ in getattr(self, 'subtitle_opts', []):
+                if label == selected_subtitle:
+                    subtitle_lang = lang_code
+                    break
 
-        browser = self.c_browser.get() if hasattr(self, 'c_browser') else "chrome"
+        browser = self.c_browser.get()
 
         return {
             "url": self.current_meta.get("webpage_url", self.e_url.get()),
@@ -324,12 +306,8 @@ class DownloadMixin:
 
         output_template = cfg['tmpl_str'] if cfg['tmpl_on'] else "%(title)s.%(ext)s"
 
-        if not hasattr(self, 'c_browser'):
-            self.update_browser_selector()
         if 'browser' in cfg:
-            browser = cfg['browser']
-            if hasattr(self, 'c_browser'):
-                self.c_browser.set(browser)
+            self.c_browser.set(cfg['browser'])
 
         cmd = self.get_cmd_base(cfg["proxy_on"], cfg["proxy_ip"], cfg["proxy_port"], cfg["cookie"])
         cmd.extend([
