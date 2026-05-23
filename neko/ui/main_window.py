@@ -16,6 +16,7 @@ from ..core.constants import (
 from ..data.database import NekoDB
 from ..data.mood import NekoMoodManager
 from ..core.cache import CacheManager
+from ..core.theme import ThemeManager
 from ..core import constants as _c
 from .mixins import DownloadMixin, QueueMixin, ResumeMixin, UIHelpersMixin
 
@@ -60,15 +61,13 @@ class NekoDownloader(DownloadMixin, QueueMixin, ResumeMixin, UIHelpersMixin, ctk
             "preview": "预告", "filler": "废话", "music_offtopic": "乱奏",
         }
 
+        ThemeManager()
         self.setup_ui()
         self.refresh_cookies()
         self.start_thread(self.startup_maintenance)
         self.start_thread(self.check_mood_loop)
 
         self.last_saved_bytes = 0
-
-        if not cached_data:
-            self.post_init_setup()
 
     # ── Lifecycle ───────────────────────────────────────────────
 
@@ -92,9 +91,6 @@ class NekoDownloader(DownloadMixin, QueueMixin, ResumeMixin, UIHelpersMixin, ctk
         except Exception as e:
             logger.error(f"获取缓存数据失败: {e}")
             return None
-
-    def post_init_setup(self):
-        pass
 
     def start_thread(self, target, *args, **kwargs):
         thread = threading.Thread(target=target, args=args, kwargs=kwargs, daemon=True)

@@ -15,8 +15,14 @@ class CacheManager:
 
     def get_code_hash(self):
         try:
-            with open(__file__, 'rb') as f:
-                return hashlib.md5(f.read()).hexdigest()
+            neko_dir = os.path.dirname(os.path.dirname(__file__))
+            h = hashlib.md5()
+            for root, _, files in os.walk(neko_dir):
+                for name in sorted(files):
+                    if name.endswith('.py'):
+                        with open(os.path.join(root, name), 'rb') as f:
+                            h.update(f.read())
+            return h.hexdigest()
         except Exception as e:
             logger.error(f"获取代码哈希失败: {e}")
             return None

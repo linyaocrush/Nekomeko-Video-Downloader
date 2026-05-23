@@ -180,7 +180,7 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 
-# App runtime data
-data/
-cache/
+# App runtime data (root only, not neko/data/ source package)
+/data/
+/cache/
 yt-dlp.exe

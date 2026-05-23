@@ -95,8 +95,7 @@ class ResumeManagerWindow(ctk.CTkToplevel):
             try:
                 if os.path.exists(session[3]):
                     os.remove(session[3])
-                self.db.cursor.execute("DELETE FROM resume_sessions WHERE session_id = ?", (session[0],))
-                self.db.conn.commit()
+                self.db.delete_resume_session(session[0])
                 self.load_pending_sessions()
             except Exception as e:
                 messagebox.showerror("删除失败", f"删除失败: {str(e)}")
@@ -111,9 +110,8 @@ class ResumeManagerWindow(ctk.CTkToplevel):
         cleaned = 0
         for session in sessions:
             if not os.path.exists(session[3]):
-                self.db.cursor.execute("DELETE FROM resume_sessions WHERE session_id = ?", (session[0],))
+                self.db.delete_resume_session(session[0])
                 cleaned += 1
-        self.db.conn.commit()
         if cleaned > 0:
             messagebox.showinfo("清理完成", f"已清理 {cleaned} 个失效会话")
             self.load_pending_sessions()
@@ -129,6 +127,5 @@ class ResumeManagerWindow(ctk.CTkToplevel):
                         os.remove(session[3])
                 except Exception:
                     pass
-            self.db.cursor.execute("DELETE FROM resume_sessions")
-            self.db.conn.commit()
+            self.db.delete_all_resume_sessions()
             self.load_pending_sessions()

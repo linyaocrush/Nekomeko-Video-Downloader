@@ -274,51 +274,12 @@ class UILoader:
             logger.error(f"检查并更新 ytdlp 时发生错误: {e}")
             return True
 
-    def load_ui_components(self):
-        self._prepare_app()
-
     def update_progress_safe(self, value, status=""):
         if self.loading_screen:
             try:
                 self.loading_screen.update_progress(value, status)
             except Exception:
                 pass
-
-    def create_main_app(self, cached_data=None):
-        from .main_window import NekoDownloader
-
-        def _create():
-            try:
-                if threading.current_thread() is threading.main_thread():
-                    self.main_app = NekoDownloader(cached_data=cached_data)
-                    if hasattr(self.main_app, 'get_cache_data'):
-                        cache_data = self.main_app.get_cache_data()
-                        self.cache_manager.save_cache(cache_data)
-                else:
-                    logger.error("创建主应用必须在主线程中执行")
-                    self.main_app = NekoDownloader(cached_data=cached_data)
-                    if hasattr(self.main_app, 'get_cache_data'):
-                        cache_data = self.main_app.get_cache_data()
-                        self.cache_manager.save_cache(cache_data)
-            except Exception as e:
-                logger.error(f"创建主应用错误: {e}")
-                self.error_message = str(e)
-                self.loading_completed = True
-
-        if self.loading_screen and self.loading_screen.window:
-            try:
-                if self.loading_screen.window.winfo_exists():
-                    self.loading_screen.safe_after(0, _create)
-            except Exception as e:
-                logger.error(f"在主线程中创建主应用错误: {e}")
-                _create()
-
-    def show_main_app(self):
-        if self.loading_screen:
-            try:
-                self.loading_screen.close()
-            except Exception as e:
-                logger.error(f"关闭加载屏错误: {e}")
 
     def show_error_and_exit(self, error_msg):
         if self.loading_screen:
