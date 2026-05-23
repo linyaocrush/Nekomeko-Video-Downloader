@@ -40,7 +40,7 @@ jobs:
           --hidden-import pydantic
           --hidden-import PIL
           --collect-submodules customtkinter
-          neko/main.py
+          main.py
 
       - name: Rename single-file artifact
         run: move dist\Nekomeko.exe dist\Nekomeko-${{ github.event.inputs.version }}-single.exe
@@ -57,7 +57,7 @@ jobs:
           --hidden-import pydantic
           --hidden-import PIL
           --collect-submodules customtkinter
-          neko/main.py
+          main.py
 
       - name: Rename portable folder
         run: move dist\Nekomeko dist\Nekomeko-${{ github.event.inputs.version }}-portable

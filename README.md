@@ -130,6 +130,7 @@ run.bat
 ## 📁 项目结构
 
 ```
+├── main.py                      # 🚪 入口文件 (PyInstaller / 直接运行)
 ├── run.bat                      # ⚡ 一键启动 (pythonw -m neko.main)
 ├── requirements.txt             # 📦 Python 依赖
 │
