@@ -63,6 +63,7 @@ class NekoDownloader(DownloadMixin, QueueMixin, ResumeMixin, UIHelpersMixin, ctk
         self.refresh_cookies()
         self.start_thread(self.startup_maintenance)
         self.start_thread(self.check_mood_loop)
+        self.restore_queue()
 
     # ── Lifecycle ───────────────────────────────────────────────
 
@@ -111,6 +112,11 @@ class NekoDownloader(DownloadMixin, QueueMixin, ResumeMixin, UIHelpersMixin, ctk
         return d
 
     def on_close(self):
+        try:
+            self._save_queue()
+        except Exception as e:
+            logger.error(f"保存队列失败: {e}")
+
         try:
             cache_data = self.get_cache_data()
             if cache_data:

@@ -4,6 +4,7 @@ import time
 
 import customtkinter as ctk
 import tkinter as tk
+from tkinter import messagebox
 
 from ...core.constants import FONT_Q_TITLE, FONT_Q_DESC
 from ...core.utils import safe_run, show_windows_toast
@@ -66,6 +67,7 @@ class QueueMixin:
 
             rb(item)
             self.log(f"Added: {self.current_meta.get('title', '?')[:15]}...", "done")
+            self._save_queue()
 
         self.run_safe(_add)
 
@@ -76,6 +78,7 @@ class QueueMixin:
             self.queue_items.remove(i)
             i['widget'].destroy()
             self.log("Deleted.", "sad")
+            self._save_queue()
 
     def edit_queue_item(self, i):
         from ..dialogs import TaskEditWindow
@@ -182,15 +185,19 @@ class QueueMixin:
             elif state == "done":
                 pkt['label'].configure(text="Done", text_color="green")
                 pkt['status'] = 'done'
+                self._save_queue()
             elif state == "error":
                 pkt['label'].configure(text="Error", text_color="red")
                 pkt['status'] = 'error'
+                self._save_queue()
             elif state == "cancelled":
                 pkt['label'].configure(text="Cancelled", text_color="gray")
                 pkt['status'] = 'cancelled'
+                self._save_queue()
 
     def _on_queue_finished(self):
         """Called on the main thread when all tasks complete."""
+        self._save_queue()
         self.run_safe(lambda: [
             self.btn_add.configure(state="normal"),
             self.btn_start.configure(state="normal"),
@@ -278,3 +285,83 @@ class QueueMixin:
             self.mood_manager.report_fail()
             self.l_status.configure(text="待命中喵")
         self.update_mood_display()
+
+    # ── Queue persistence ───────────────────────────────────────
+
+    def _save_queue(self):
+        """Persist current queue items to the database."""
+        tasks = []
+        for it in self.queue_items:
+            tasks.append({
+                "url": it["config"].get("url", ""),
+                "title": it.get("meta", {}).get("title", "Unknown"),
+                "config": it["config"],
+                "status": it["status"],
+            })
+        self.db.save_queue_tasks(tasks)
+
+    def restore_queue(self):
+        """Restore queue from database. Call from main_window after setup."""
+        saved = self.db.load_queue_tasks()
+        if not saved:
+            return
+        count = len(saved)
+        done = sum(1 for t in saved if t["status"] in ("done", "finished"))
+        pending = count - done
+        if pending == 0:
+            self.db.clear_queue_tasks()
+            return
+
+        def _do_restore():
+            if not messagebox.askyesno("恢复队列", f"发现 {pending} 个未完成任务，是否恢复？"):
+                self.db.clear_queue_tasks()
+                return
+
+            self.log(f"恢复 {pending} 个任务...", "working")
+            for t in saved:
+                if t["status"] in ("done", "finished"):
+                    continue
+                cfg = t["config"]
+                if not cfg or not cfg.get("url"):
+                    continue
+
+                # Rebuild UI widget for the queue item
+                if len(self.queue_items) == 0:
+                    self.paned.add(self.right_panel, minsize=320, stretch="always")
+
+                item = ctk.CTkFrame(self.scroll_q, fg_color=_c.CURRENT_THEME["panel_bg"], corner_radius=10)
+                item.pack(fill="x", pady=5)
+                tf = ctk.CTkFrame(item, fg_color="transparent")
+                tf.pack(side="left", fill="both", expand=True, padx=5)
+                ctk.CTkLabel(tf, text=t.get("title", "?"), font=FONT_Q_TITLE, anchor="w", text_color=_c.CURRENT_THEME["text"]).pack(fill="x", expand=True)
+                desc_parts = [cfg.get("mode", "?")]
+                dl = ctk.CTkLabel(tf, text=" ".join(desc_parts), font=FONT_Q_DESC, text_color="gray", anchor="w")
+                dl.pack(fill="x", expand=True)
+
+                status = t["status"]
+                status_colors = {"waiting": "gray", "error": "red", "cancelled": "gray"}
+                status_texts = {"waiting": "Queued", "error": "Error", "cancelled": "Cancelled"}
+                lbl = ctk.CTkLabel(item, text=status_texts.get(status, "Queued"), font=("微软雅黑", 10), text_color=status_colors.get(status, "gray"))
+                lbl.pack(side="right", padx=10)
+
+                pkt = {"config": cfg, "label": lbl, "desc_label": dl, "status": status, "meta": {"title": t.get("title", "?")}, "widget": item}
+                self.queue_items.append(pkt)
+
+                def pop(e, p=pkt):
+                    m = tk.Menu(self, tearoff=0)
+                    if p['status'] in ('running', 'waiting'):
+                        m.add_command(label="❌ 取消此任务", command=lambda: self.cancel_task(p))
+                    m.add_command(label="✏️ Edit", command=lambda: self.edit_queue_item(p))
+                    m.add_command(label="🗑️ Delete", command=lambda: self.delete_queue_item(p))
+                    m.tk_popup(e.x_root, e.y_root)
+
+                def rb(w):
+                    w.bind("<Button-3>", pop)
+                    [rb(c) for c in w.winfo_children()]
+
+                rb(item)
+
+            self.db.clear_queue_tasks()
+            self.log(f"已恢复 {pending} 个任务", "done")
+
+        self.after(1000, _do_restore)

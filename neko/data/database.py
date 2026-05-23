@@ -96,6 +96,17 @@ class NekoDB:
         """)
         self.cursor.execute('CREATE INDEX IF NOT EXISTS idx_session_status ON resume_sessions (status)')
         self.cursor.execute('CREATE INDEX IF NOT EXISTS idx_session_update ON resume_sessions (last_update)')
+
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS queue_tasks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                url TEXT NOT NULL,
+                title TEXT DEFAULT 'Unknown',
+                config_json TEXT NOT NULL,
+                status TEXT DEFAULT 'waiting',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
         self.conn.commit()
 
     def save_resume_session(self, session_id, url, output_path, temp_file,
@@ -132,6 +143,46 @@ class NekoDB:
         with self.lock:
             self.cursor.execute("DELETE FROM resume_sessions")
             self.conn.commit()
+
+    # ── Queue persistence ───────────────────────────────────────
+
+    def save_queue_tasks(self, tasks):
+        """Save the current queue (replaces all). tasks is a list of dicts."""
+        with self.lock:
+            self.cursor.execute("DELETE FROM queue_tasks")
+            for t in tasks:
+                self.cursor.execute(
+                    "INSERT INTO queue_tasks (url, title, config_json, status) VALUES (?, ?, ?, ?)",
+                    (t.get("url", ""), t.get("title", "Unknown"), json.dumps(t.get("config", {})), t.get("status", "waiting")),
+                )
+            self.conn.commit()
+
+    def load_queue_tasks(self):
+        """Load saved queue tasks. Returns list of dicts."""
+        with self.lock:
+            self.cursor.execute("SELECT url, title, config_json, status FROM queue_tasks ORDER BY id")
+            rows = self.cursor.fetchall()
+        result = []
+        for url, title, cfg_json, status in rows:
+            try:
+                cfg = json.loads(cfg_json) if cfg_json else {}
+            except Exception:
+                cfg = {}
+            # running → waiting (process was killed)
+            if status == "running":
+                status = "waiting"
+            result.append({"url": url, "title": title, "config": cfg, "status": status})
+        return result
+
+    def clear_queue_tasks(self):
+        with self.lock:
+            self.cursor.execute("DELETE FROM queue_tasks")
+            self.conn.commit()
+
+    def has_pending_queue(self):
+        with self.lock:
+            self.cursor.execute("SELECT COUNT(*) FROM queue_tasks WHERE status NOT IN ('done', 'finished')")
+            return self.cursor.fetchone()[0] > 0
 
     def add_record(self, meta, size_bytes, elapsed):
         with self.lock:
