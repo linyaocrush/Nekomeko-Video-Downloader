@@ -240,7 +240,7 @@ class NekoDownloader(DownloadMixin, QueueMixin, ResumeMixin, UIHelpersMixin, ctk
         self.paned.pack(fill="both", expand=True, padx=15, pady=(0, 15))
 
         self.left_panel = ctk.CTkFrame(self.paned, fg_color=_c.CURRENT_THEME["secondary"], corner_radius=15)
-        self.paned.add(self.left_panel, minsize=500, stretch="always")
+        self.paned.add(self.left_panel, minsize=400, stretch="always")
 
         # ── 1. URL input ──────────────────────────────────────────
         inp = ctk.CTkFrame(self.left_panel, fg_color="transparent")
@@ -330,8 +330,8 @@ class NekoDownloader(DownloadMixin, QueueMixin, ResumeMixin, UIHelpersMixin, ctk
         r1.columnconfigure(1, weight=1)
         r1.columnconfigure(3, weight=1)
         ctk.CTkLabel(r1, text="😾 广告处理", font=FONT_N, width=90, anchor="w", text_color=_c.CURRENT_THEME["text"]).grid(row=0, column=0, sticky="w")
-        self.c_sponsor_action = ctk.CTkComboBox(r1, values=["🙈 Off", "🔖 Mark", "✂️ Remove"], font=FONT_N, width=130, command=self.on_sponsor_action_change, text_color=_c.CURRENT_THEME["text"], fg_color=_c.CURRENT_THEME["panel_bg"])
-        self.c_sponsor_action.grid(row=0, column=1, sticky="w", padx=(5, 15))
+        self.c_sponsor_action = ctk.CTkComboBox(r1, values=["🙈 Off", "🔖 Mark", "✂️ Remove"], font=FONT_N, command=self.on_sponsor_action_change, text_color=_c.CURRENT_THEME["text"], fg_color=_c.CURRENT_THEME["panel_bg"])
+        self.c_sponsor_action.grid(row=0, column=1, sticky="ew", padx=(5, 15))
         # Migrate old config values to new short form
         _sa = self.cfg["sponsor_action"]
         _sa_map = {"🙈 视而不见 (Off)": "🙈 Off", "🔖 做个记号 (Mark)": "🔖 Mark", "✂️ 咬掉扔了 (Remove)": "✂️ Remove"}
@@ -339,7 +339,7 @@ class NekoDownloader(DownloadMixin, QueueMixin, ResumeMixin, UIHelpersMixin, ctk
         self.l_sb_cats = ctk.CTkLabel(r1, text="", font=FONT_S, text_color=_c.CURRENT_THEME["accent"])
         self.l_sb_cats.grid(row=0, column=1, sticky="e")
         ctk.CTkLabel(r1, text="🍪 Cookie", font=FONT_N, width=70, anchor="w", text_color=_c.CURRENT_THEME["text"]).grid(row=0, column=2, sticky="w")
-        self.c_cookie = ctk.CTkComboBox(r1, values=["🚫 No Cookie"], width=150, height=30, font=FONT_N, fg_color=_c.CURRENT_THEME["panel_bg"], text_color=_c.CURRENT_THEME["text"])
+        self.c_cookie = ctk.CTkComboBox(r1, values=["🚫 No Cookie"], height=30, font=FONT_N, fg_color=_c.CURRENT_THEME["panel_bg"], text_color=_c.CURRENT_THEME["text"])
         self.c_cookie.grid(row=0, column=3, sticky="ew", padx=(5, 0))
         self.refresh_sb_display()
 
@@ -429,8 +429,8 @@ class NekoDownloader(DownloadMixin, QueueMixin, ResumeMixin, UIHelpersMixin, ctk
         ctk.CTkLabel(r6, text="🌐 浏览器", font=FONT_N, width=90, anchor="w", text_color=_c.CURRENT_THEME["text"]).grid(row=0, column=0, sticky="w")
         self.browser_frame = ctk.CTkFrame(r6, fg_color="transparent")
         self.browser_frame.grid(row=0, column=1, sticky="ew", padx=5)
-        self.c_browser = ctk.CTkComboBox(self.browser_frame, values=["chrome", "firefox", "edge", "safari"], width=120, font=FONT_N, fg_color=_c.CURRENT_THEME["panel_bg"], text_color=_c.CURRENT_THEME["text"])
-        self.c_browser.pack(side="left")
+        self.c_browser = ctk.CTkComboBox(self.browser_frame, values=["chrome", "firefox", "edge", "safari"], font=FONT_N, fg_color=_c.CURRENT_THEME["panel_bg"], text_color=_c.CURRENT_THEME["text"])
+        self.c_browser.pack(side="left", fill="x", expand=True)
         ctk.CTkLabel(self.browser_frame, text="Cookie 提取源", font=FONT_S, text_color=_c.CURRENT_THEME["on_surface_variant"]).pack(side="left", padx=8)
         self.c_cookie.configure(command=self.update_browser_selector)
 
@@ -447,7 +447,7 @@ class NekoDownloader(DownloadMixin, QueueMixin, ResumeMixin, UIHelpersMixin, ctk
         self.log_box = ctk.CTkTextbox(self.left_panel, height=100, fg_color=_c.CURRENT_THEME["panel_bg"], text_color=_c.CURRENT_THEME["text"], font=FONT_LOG, state="disabled")
         self.log_box.pack(fill="both", expand=True, padx=20, pady=(0, 10))
 
-        # ── Right panel (queue) ────────────────────────────────────
+        # ── Right panel (queue) — hidden until first item added ────
         self.right_panel = ctk.CTkFrame(self.paned, fg_color=_c.CURRENT_THEME["secondary"], corner_radius=15)
         ctk.CTkLabel(self.right_panel, text="🛒 篮子里的小老鼠", font=FONT_B, text_color=_c.CURRENT_THEME["accent"]).pack(pady=10)
         self.scroll_q = ctk.CTkScrollableFrame(self.right_panel, fg_color="transparent")
