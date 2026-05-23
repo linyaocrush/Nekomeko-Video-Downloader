@@ -387,6 +387,12 @@ class DownloadMixin:
             env={**os.environ, "PYTHONIOENCODING": "utf-8"},
         )
 
+        # Register with scheduler for cancellation (if running in queue mode)
+        sched = getattr(self, '_scheduler', None)
+        task_pkt = getattr(self, '_current_task_pkt', None)
+        if sched and task_pkt:
+            sched.register_process(task_pkt, p)
+
         rp = re.compile(r"(\d+\.?\d*)%")
         rs = re.compile(r"of\s+(\S+)")
         rsp = re.compile(r"at\s+(\S+)")
@@ -395,7 +401,6 @@ class DownloadMixin:
         last_save_time = 0
         last_ui_time = 0
         final_file_path = None
-        # Throttled UI state — only applied to widgets at 200ms intervals
         pending_pct = None
         pending_txt = None
 
@@ -414,6 +419,16 @@ class DownloadMixin:
             last_ui_time = time.time()
 
         for l in p.stdout:
+            # Check cancellation
+            if sched and task_pkt and sched.is_task_cancelled(task_pkt):
+                p.terminate()
+                try:
+                    p.wait(timeout=3)
+                except subprocess.TimeoutExpired:
+                    p.kill()
+                flush_ui()
+                return False
+
             if "Merger" in l:
                 if m := re_merge.search(l):
                     final_file_path = m.group(1)
@@ -438,7 +453,6 @@ class DownloadMixin:
                         txt += f" | {me.group(1)}"
                     pending_txt = txt
 
-                    # Flush UI at most once per 200ms
                     if time.time() - last_ui_time > 0.2:
                         flush_ui()
 
@@ -451,8 +465,11 @@ class DownloadMixin:
             elif not any(x in l for x in ["[download]", "Deleting"]):
                 self.log(l.strip())
 
-        # Flush any remaining progress
         flush_ui()
+
+        # Check cancellation one more time after process exits
+        if sched and task_pkt and sched.is_task_cancelled(task_pkt):
+            return False
 
         p.wait()
         self.run_safe(lambda: self.prog.set(1 if p.returncode == 0 else 0))

@@ -295,12 +295,16 @@ class NekoDownloader(DownloadMixin, QueueMixin, ResumeMixin, UIHelpersMixin, ctk
         bb.columnconfigure(0, weight=1)
         bb.columnconfigure(1, weight=1)
         bb.columnconfigure(2, weight=1)
+        bb.columnconfigure(3, weight=1)
         self.btn_add = ctk.CTkButton(bb, text="📥 放进篮子", height=50, font=FONT_B, fg_color=_c.CURRENT_THEME["btn_add_bg"], text_color=_c.CURRENT_THEME["btn_add_fg"], hover_color=_c.CURRENT_THEME["btn_add_bg"], command=lambda: [self.on_interact(), self.start_thread(self.smart_add_flow)])
         self.btn_add.grid(row=0, column=0, padx=(0, 5), sticky="ew")
         self.btn_now = ctk.CTkButton(bb, text="⚡ 立即抓取", height=50, font=FONT_B, fg_color=_c.CURRENT_THEME["btn_now_bg"], text_color=_c.CURRENT_THEME["btn_now_fg"], hover_color=_c.CURRENT_THEME["btn_now_bg"], command=lambda: [self.on_interact(), self.start_thread(self.download_now_flow)])
         self.btn_now.grid(row=0, column=1, padx=5, sticky="ew")
         self.btn_start = ctk.CTkButton(bb, text="🚀 叼回窝里", height=50, font=FONT_B, fg_color=_c.CURRENT_THEME["btn_start_bg"], text_color=_c.CURRENT_THEME["btn_start_fg"], hover_color=_c.CURRENT_THEME["btn_start_bg"], command=lambda: [self.on_interact(), self.start_thread(self.process_queue)])
-        self.btn_start.grid(row=0, column=2, padx=(5, 0), sticky="ew")
+        self.btn_start.grid(row=0, column=2, padx=5, sticky="ew")
+        self.btn_cancel_queue = ctk.CTkButton(bb, text="🛑 取消队列", height=50, font=FONT_B, fg_color=_c.CURRENT_THEME["error_container"], text_color=_c.CURRENT_THEME["on_error_container"], hover_color=_c.CURRENT_THEME["error_container"], command=lambda: [self.on_interact(), self.cancel_queue()])
+        self.btn_cancel_queue.grid(row=0, column=3, padx=(5, 0), sticky="ew")
+        self.btn_cancel_queue.configure(state="disabled")
 
         # ── 6. Status + progress ──────────────────────────────────
         self.l_status = ctk.CTkLabel(self.left_panel, text="呼噜呼噜… 待命中喵", font=FONT_S, text_color=_c.CURRENT_THEME["on_surface_variant"])

@@ -1,5 +1,6 @@
 import threading
 import logging
+import time
 
 import customtkinter as ctk
 import tkinter as tk
@@ -13,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class QueueMixin:
-    """Download queue: add, edit, delete, process items."""
+    """Download queue: add, edit, delete, cancel, process items."""
 
     # ── Add / Edit / Delete ─────────────────────────────────────
 
@@ -53,6 +54,8 @@ class QueueMixin:
 
             def pop(e):
                 m = tk.Menu(self, tearoff=0)
+                if pkt['status'] in ('running', 'waiting'):
+                    m.add_command(label="❌ 取消此任务", command=lambda: self.cancel_task(pkt))
                 m.add_command(label="✏️ Edit", command=lambda: self.edit_queue_item(pkt))
                 m.add_command(label="🗑️ Delete", command=lambda: self.delete_queue_item(pkt))
                 m.tk_popup(e.x_root, e.y_root)
@@ -68,6 +71,8 @@ class QueueMixin:
 
     def delete_queue_item(self, i):
         if i in self.queue_items:
+            if i['status'] == 'running':
+                self.cancel_task(i)
             self.queue_items.remove(i)
             i['widget'].destroy()
             self.log("Deleted.", "sad")
@@ -81,6 +86,32 @@ class QueueMixin:
             self.log("Task updated.", "happy")
         TaskEditWindow(self, i, save)
 
+    # ── Cancel ──────────────────────────────────────────────────
+
+    def cancel_task(self, pkt):
+        """Cancel a single task. Kills its subprocess if running."""
+        if pkt['status'] not in ('running', 'waiting'):
+            return
+        sched = getattr(self, '_scheduler', None)
+        if sched:
+            sched.cancel_task(pkt)
+        pkt['status'] = 'cancelled'
+        self.run_safe(lambda: pkt['label'].configure(text="Cancelled", text_color="gray"))
+        self.log("任务已取消", "sad")
+
+    def cancel_queue(self):
+        """Cancel all running and waiting tasks."""
+        sched = getattr(self, '_scheduler', None)
+        if not sched:
+            return
+        sched.cancel_all()
+        for it in self.queue_items:
+            if it['status'] in ('running', 'waiting'):
+                it['status'] = 'cancelled'
+                self.run_safe(lambda p=it: p['label'].configure(text="Cancelled", text_color="gray"))
+        self.log("队列已全部取消", "sad")
+        self._on_queue_finished()
+
     # ── Process queue (non-blocking) ───────────────────────────
 
     def process_queue(self):
@@ -89,7 +120,11 @@ class QueueMixin:
             self.log("篮子空空的喵…", "sad")
             return
 
-        self.run_safe(lambda: [self.btn_add.configure(state="disabled"), self.btn_start.configure(state="disabled")])
+        self.run_safe(lambda: [
+            self.btn_add.configure(state="disabled"),
+            self.btn_start.configure(state="disabled"),
+            self.btn_cancel_queue.configure(state="normal"),
+        ])
         self.log(f"Processing {len(q)} items...", "working")
 
         self._scheduler = TaskScheduler(
@@ -108,6 +143,10 @@ class QueueMixin:
         """Runs on a worker thread. Pushes events to the scheduler queue."""
         sched = self._scheduler
 
+        if sched.is_task_cancelled(task_id):
+            sched.push_event(task_id, "status", {"state": "cancelled"})
+            return
+
         sched.push_event(task_id, "status", {"state": "running"})
 
         cfg = it['config']
@@ -120,9 +159,14 @@ class QueueMixin:
                 'output_path': cfg['dir'], 'temp_file': temp_file,
             }
 
+        # Store task pkt reference so download engine can register its Popen
+        self._current_task_pkt = task_id
         ok = self.download_item_with_resume(cfg, it['meta'], session_dict)
+        self._current_task_pkt = None
 
-        if ok:
+        if sched.is_task_cancelled(task_id):
+            sched.push_event(task_id, "status", {"state": "cancelled"})
+        elif ok:
             sched.push_event(task_id, "status", {"state": "done"})
             self.mood_manager.download_success_today += 1
         else:
@@ -141,21 +185,36 @@ class QueueMixin:
             elif state == "error":
                 pkt['label'].configure(text="Error", text_color="red")
                 pkt['status'] = 'error'
+            elif state == "cancelled":
+                pkt['label'].configure(text="Cancelled", text_color="gray")
+                pkt['status'] = 'cancelled'
 
     def _on_queue_finished(self):
         """Called on the main thread when all tasks complete."""
         self.run_safe(lambda: [
             self.btn_add.configure(state="normal"),
             self.btn_start.configure(state="normal"),
+            self.btn_cancel_queue.configure(state="disabled"),
             self.l_status.configure(text="Finished"),
         ])
-        self.log("全部叼回窝里啦喵！", "done")
-        show_windows_toast("Neko", "Queue finished!")
-        self.mood_manager.interact()
-        self.mood_manager.update_logic()
-        self.update_mood_display()
 
-    # ── Single download flow (also uses scheduler for consistency)
+        statuses = [i['status'] for i in self.queue_items]
+        cancelled = statuses.count('cancelled')
+        done = statuses.count('done')
+        errors = statuses.count('error')
+
+        if cancelled > 0 and done == 0 and errors == 0:
+            self.log("队列已取消", "sad")
+        elif done > 0:
+            self.log("全部叼回窝里啦喵！", "done")
+            show_windows_toast("Neko", "Queue finished!")
+            self.mood_manager.interact()
+            self.mood_manager.update_logic()
+            self.update_mood_display()
+        else:
+            self.log("队列处理完毕", "working")
+
+    # ── Single download flow ────────────────────────────────────
 
     def download_now_flow(self):
         u = self.run_safe(lambda: self.e_url.get().strip())
@@ -181,21 +240,41 @@ class QueueMixin:
             }
             self.log("Detected partial file, attempting resume...", "working")
 
+        self._single_cancel_flag = threading.Event()
+        self._single_popen = None
+
         def _single_task():
+            # Store popen reference for cancellation
+            self._current_task_pkt = "__single__"
             ok = self.download_item_with_resume(cfg, self.current_meta, session_dict)
-            self.after(0, lambda: self._single_done(ok))
+            self._current_task_pkt = None
+            cancelled = self._single_cancel_flag.is_set()
+            self.after(0, lambda: self._single_done(ok, cancelled))
 
-        threading.Thread(target=_single_task, daemon=True).start()
+        self._single_thread = threading.Thread(target=_single_task, daemon=True)
+        self._single_thread.start()
 
-    def _single_done(self, ok):
+    def cancel_single_download(self):
+        """Cancel the current single download (immediate grab)."""
+        self._single_cancel_flag.set()
+        sched = getattr(self, '_scheduler', None)
+        if sched:
+            sched.cancel_task("__single__")
+        self.log("下载已取消", "sad")
+
+    def _single_done(self, ok, cancelled):
         self.btn_now.configure(state="normal")
         self.btn_add.configure(state="normal")
-        if ok:
+        if cancelled:
+            self.log("下载已取消", "sad")
+            self.l_status.configure(text="已取消")
+        elif ok:
             show_windows_toast("Neko", "Done!")
             self.log("Done!", "done")
             self.mood_manager.report_success()
+            self.l_status.configure(text="待命中喵")
         else:
             self.log("Failed.", "sad")
             self.mood_manager.report_fail()
-        self.l_status.configure(text="待命中喵")
+            self.l_status.configure(text="待命中喵")
         self.update_mood_display()
