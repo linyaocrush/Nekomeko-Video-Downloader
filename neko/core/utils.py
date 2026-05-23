@@ -1,5 +1,3 @@
-import os
-import subprocess
 import threading
 import traceback
 import logging
@@ -40,11 +38,8 @@ def show_windows_toast(title, msg):
         $notifier.Show($notification)
         """
         try:
-            subprocess.run(
-                ["powershell", "-Command", ps_script],
-                capture_output=True,
-                creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0,
-            )
+            from .process import run_text
+            run_text(["powershell", "-Command", ps_script])
         except Exception:
             pass
     threading.Thread(target=_run, daemon=True).start()

@@ -5,12 +5,12 @@ Download threads push events to a queue; the UI polls it every 100ms.
 Each task can be cancelled — its subprocess is killed and status set to 'cancelled'.
 """
 
-import os
 import queue
 import threading
 import logging
-import subprocess
 from concurrent.futures import ThreadPoolExecutor
+
+from ...core.process import kill_process
 
 logger = logging.getLogger(__name__)
 
@@ -112,28 +112,7 @@ class TaskScheduler:
         p = self._processes.pop(task_id, None)
         if p is None:
             return
-        try:
-            if p.poll() is not None:
-                return  # already exited
-            if os.name == 'nt':
-                # Windows: kill process tree via taskkill
-                try:
-                    subprocess.run(
-                        ["taskkill", "/F", "/T", "/PID", str(p.pid)],
-                        capture_output=True,
-                        creationflags=subprocess.CREATE_NO_WINDOW,
-                    )
-                except Exception:
-                    p.kill()
-            else:
-                # Unix: send SIGTERM, then SIGKILL after 3s
-                p.terminate()
-                try:
-                    p.wait(timeout=3)
-                except subprocess.TimeoutExpired:
-                    p.kill()
-        except Exception as e:
-            logger.error(f"Failed to kill process {task_id}: {e}")
+        kill_process(p)
 
     # ── Internal ───────────────────────────────────────────────
 

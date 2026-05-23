@@ -4,7 +4,6 @@ import re
 import io
 import glob
 import time
-import subprocess
 import shutil
 import urllib.request
 import logging
@@ -13,6 +12,7 @@ import customtkinter as ctk
 from PIL import Image
 
 from ...core.utils import safe_run
+from ...core.process import run_text, popen_text
 
 logger = logging.getLogger(__name__)
 
@@ -55,16 +55,9 @@ class DownloadMixin:
         self.video_infos.clear()
         self.subtitle_opts = []
 
-        si = subprocess.STARTUPINFO()
-        si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
         cmd = self.get_cmd_base(c["pon"], c["pip"], c["ppt"], c["ck"])
 
-        res = subprocess.run(
-            cmd + ["--dump-json", url], capture_output=True, text=True,
-            encoding='utf-8', errors='replace', startupinfo=si,
-            creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0,
-            env={**os.environ, "PYTHONIOENCODING": "utf-8"},
-        )
+        res = run_text(cmd + ["--dump-json", url])
 
         if res.returncode != 0:
             self.log("Metadata fetch failed, using basic info for download", "sad")
@@ -119,12 +112,7 @@ class DownloadMixin:
         self.log("Checking subtitles...", "working")
         try:
             subs_cmd = cmd + ["--list-subs", url]
-            subs_res = subprocess.run(
-                subs_cmd, capture_output=True, text=True,
-                encoding='utf-8', errors='replace', startupinfo=si,
-                creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0,
-                env={**os.environ, "PYTHONIOENCODING": "utf-8"},
-            )
+            subs_res = run_text(subs_cmd)
             if subs_res.returncode == 0:
                 for line in subs_res.stdout.strip().split('\n'):
                     line = line.strip()
@@ -379,13 +367,7 @@ class DownloadMixin:
         return False
 
     def execute_download_with_progress(self, cmd, cfg, meta, session_id):
-        p = subprocess.Popen(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-            text=True, encoding='utf-8', errors='replace',
-            startupinfo=subprocess.STARTUPINFO(),
-            creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0,
-            env={**os.environ, "PYTHONIOENCODING": "utf-8"},
-        )
+        p = popen_text(cmd)
 
         # Register with scheduler for cancellation (if running in queue mode)
         sched = getattr(self, '_scheduler', None)

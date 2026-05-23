@@ -4,12 +4,13 @@ import time
 import logging
 import urllib.request
 import json
-import subprocess
 import os
 import shutil
 
 import customtkinter as ctk
 from tkinter import messagebox
+
+from ..core.process import run_text
 
 logger = logging.getLogger(__name__)
 
@@ -205,10 +206,7 @@ class UILoader:
             current_version = None
 
             try:
-                result = subprocess.run(
-                    [ytdlp_path, "--version"], capture_output=True, text=True,
-                    creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0,
-                )
+                result = run_text([ytdlp_path, "--version"])
                 if result.returncode == 0:
                     current_version = result.stdout.strip()
                     logger.info(f"当前 ytdlp 版本: {current_version}")
@@ -235,10 +233,7 @@ class UILoader:
 
                 try:
                     update_cmd = [ytdlp_path, "--update"]
-                    result = subprocess.run(
-                        update_cmd, capture_output=True, text=True,
-                        creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0,
-                    )
+                    result = run_text(update_cmd)
                     if result.returncode == 0:
                         logger.info("ytdlp 更新成功")
                         self.update_progress_safe(0.6, "ytdlp 更新成功")

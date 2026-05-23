@@ -2,7 +2,6 @@ import os
 import time
 import random
 import threading
-import subprocess
 import shutil
 import logging
 
@@ -11,6 +10,7 @@ import customtkinter as ctk
 
 from ...core.constants import FONT_N, FONT_B, FONT_S, COOKIES_DIR
 from ...core.utils import safe_run
+from ...core.process import run_text
 from ...core import constants as _c
 
 logger = logging.getLogger(__name__)
@@ -235,14 +235,14 @@ class UIHelpersMixin:
             f_ok = True
 
         try:
-            subprocess.run([exe, "--rm-cache-dir"], capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
+            run_text([exe, "--rm-cache-dir"], capture=True)
             cache_cleared = True
         except Exception:
             cache_cleared = False
 
         version_info = None
         try:
-            res = subprocess.run([exe, "--version"], capture_output=True, text=True, creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
+            res = run_text([exe, "--version"])
             version_info = res.stdout.strip()
         except Exception:
             version_info = None
