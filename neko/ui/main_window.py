@@ -99,6 +99,7 @@ class NekoDownloader(DownloadMixin, QueueMixin, ResumeMixin, UIHelpersMixin, ctk
             "mode": "最佳喵 (Auto)", "embed": False, "cookie": "🚫 No Cookie", "playlist": False,
             "sponsor_action": "🙈 Off", "sponsor_cats": ["all"],
             "tmpl_on": False, "tmpl_str": "%(title)s", "ytdlp_path": "", "ffmpeg_path": "",
+            "browser": "chrome",
             "chat_mode": "full", "chat_filters": ["author", "message", "timestamp"],
             "time_range_on": False, "start_h": "00", "start_m": "00", "start_s": "00",
             "end_h": "00", "end_m": "00", "end_s": "00",
@@ -130,6 +131,7 @@ class NekoDownloader(DownloadMixin, QueueMixin, ResumeMixin, UIHelpersMixin, ctk
         d = {
             "dir": self.e_dir.get(), "proxy": pv, "proxy_on": self.sw_proxy.get(),
             "mode": self.seg_mode.get(), "embed": self.sw_embed.get(), "cookie": self.c_cookie.get(),
+            "browser": self.c_browser.get() if hasattr(self, 'c_browser') else "chrome",
             "playlist": self.sw_list.get(), "sponsor_action": self.c_sponsor_action.get(),
             "sponsor_cats": self.current_sponsor_cats,
             "tmpl_on": self.cfg["tmpl_on"], "tmpl_str": self.cfg["tmpl_str"],

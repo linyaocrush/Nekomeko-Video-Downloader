@@ -110,6 +110,9 @@ class UIHelpersMixin:
         fs = ["🚫 No Cookie", "🔄 使用内置提取器"] + ([f for f in os.listdir(COOKIES_DIR) if f.endswith('.txt')] if os.path.exists(COOKIES_DIR) else [])
         self.c_cookie.configure(values=fs)
         self.c_cookie.set(self.cfg["cookie"] if self.cfg["cookie"] in fs else "🚫 No Cookie")
+        saved_browser = self.cfg.get("browser", "chrome")
+        if hasattr(self, 'c_browser'):
+            self.c_browser.set(saved_browser)
         self.update_browser_selector()
 
     def update_browser_selector(self, *args):
@@ -261,6 +264,9 @@ class UIHelpersMixin:
                     self.l_version.configure(text=f"Core: {version_info}", text_color=_c.CURRENT_THEME["accent"])
                 else:
                     self.l_version.configure(text="Unknown Ver", text_color=_c.CURRENT_THEME["on_surface_variant"])
+                # Check for JS runtime (needed by yt-dlp for YouTube)
+                if not shutil.which("node") and not shutil.which("deno"):
+                    self.log("⚠️ 未检测到 Node.js/Deno，YouTube 提取可能受限", "sad")
                 self.mood_manager.update_logic()
                 self.update_mood_display()
             except Exception as e:

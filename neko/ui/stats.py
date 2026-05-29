@@ -159,6 +159,10 @@ class StatsWindow(ctk.CTkToplevel):
         self.hist_scroll.grid(row=2, column=0, sticky="nsew", padx=5, pady=5)
         self.refresh_history()
 
+    def _delete_history_record(self, record_id):
+        self.db.delete_record(record_id)
+        self.refresh_history()
+
     def toggle_filters(self):
         if self.filter_visible:
             self.filter_frame.grid_forget()
@@ -204,3 +208,4 @@ class StatsWindow(ctk.CTkToplevel):
                 ctk.CTkButton(act, text="📺", width=30, height=24, fg_color=_c.CURRENT_THEME["tertiary_container"], text_color=_c.CURRENT_THEME["on_tertiary_container"], command=lambda u=r.webpage_url: webbrowser.open(u)).pack(side="left", padx=1)
             if r.uploader_url:
                 ctk.CTkButton(act, text="🏠", width=30, height=24, fg_color="#DDA0DD", command=lambda u=r.uploader_url: webbrowser.open(u)).pack(side="left", padx=1)
+            ctk.CTkButton(act, text="🗑️", width=30, height=24, fg_color=_c.CURRENT_THEME["error_container"], text_color=_c.CURRENT_THEME["on_error_container"], command=lambda rid=r.id: self._delete_history_record(rid)).pack(side="left", padx=1)

@@ -134,6 +134,11 @@ class NekoDB:
     def complete_resume_session(self, session_id):
         self.delete_resume_session(session_id)
 
+    def delete_record(self, record_id):
+        with self.lock:
+            self.cursor.execute("DELETE FROM downloads WHERE id = ?", (record_id,))
+            self.conn.commit()
+
     def delete_resume_session(self, session_id):
         with self.lock:
             self.cursor.execute("DELETE FROM resume_sessions WHERE session_id = ?", (session_id,))

@@ -20,22 +20,33 @@ logger = logging.getLogger(__name__)
 class DownloadMixin:
     """yt-dlp command building, metadata analysis, and download execution."""
 
-    def get_cmd_base(self, pon, pip, ppt, ck):
+    def get_cmd_base(self, pon, pip, ppt, ck, browser="chrome"):
         exe = self.cfg.get('ytdlp_path', '') or "yt-dlp"
-        cmd = [exe, "--no-warnings", "--ignore-errors", "--encoding", "utf-8"]
+        cmd = [exe, "--no-warnings", "--ignore-errors", "--encoding", "utf-8",
+               "--extractor-args", "youtube:player_client=web,android"]
         if not shutil.which("ffmpeg") and self.cfg.get('ffmpeg_path'):
             cmd.extend(["--ffmpeg-location", self.cfg['ffmpeg_path']])
         if pon and pip and ppt:
             cmd.extend(["--proxy", f"http://{pip}:{ppt}"])
         if "🚫" not in ck:
             if ck == "🔄 使用内置提取器":
-                browser = self.c_browser.get()
                 cmd.extend(["--cookies-from-browser", browser])
             else:
                 from ...core.constants import COOKIES_DIR
                 cp = os.path.join(COOKIES_DIR, ck)
                 if os.path.exists(cp):
-                    cmd.extend(["--cookies", cp])
+                    # yt-dlp tries to write back to the cookie file on exit.
+                    # Use a temp copy to avoid PermissionError on the original.
+                    import tempfile
+                    tmp = tempfile.NamedTemporaryFile(
+                        suffix=".txt", prefix="neko_cookie_", delete=False,
+                    )
+                    tmp.write(open(cp, "rb").read())
+                    tmp.close()
+                    cmd.extend(["--cookies", tmp.name])
+                    self._temp_cookie = tmp.name  # track for cleanup
+                else:
+                    self.log(f"Cookie 文件不存在: {cp}", "sad")
         return cmd
 
     @safe_run
@@ -46,6 +57,7 @@ class DownloadMixin:
             return {
                 "pon": self.sw_proxy.get(), "pip": self.e_proxy_ip.get(),
                 "ppt": self.e_proxy_port.get(), "ck": self.c_cookie.get(),
+                "browser": self.c_browser.get() if hasattr(self, 'c_browser') else "chrome",
             }
 
         c = self.run_safe(gc)
@@ -55,12 +67,16 @@ class DownloadMixin:
         self.video_infos.clear()
         self.subtitle_opts = []
 
-        cmd = self.get_cmd_base(c["pon"], c["pip"], c["ppt"], c["ck"])
+        cmd = self.get_cmd_base(c["pon"], c["pip"], c["ppt"], c["ck"], c["browser"])
 
         res = run_text(cmd + ["--dump-json", url])
 
         if res.returncode != 0:
-            self.log("Metadata fetch failed, using basic info for download", "sad")
+            stderr_hint = (res.stderr or "").strip()
+            if "sign in" in stderr_hint.lower() or "login" in stderr_hint.lower() or "age" in stderr_hint.lower():
+                self.log("此视频需要登录，请设置 Cookie", "sad")
+            else:
+                self.log("Metadata fetch failed, using basic info for download", "sad")
             d = {"title": "Unknown Video", "uploader": "Unknown Uploader", "webpage_url": url, "formats": [], "thumbnail": None}
         else:
             try:
@@ -183,6 +199,7 @@ class DownloadMixin:
             self.log(f"Analyzed: {d.get('title', '?')[:15]}...", "happy")
 
         self.run_safe(upd)
+        self._cleanup_temp_cookie()
         return True
 
     def analyze_ui_wrapper(self):
@@ -257,10 +274,7 @@ class DownloadMixin:
 
         output_template = cfg['tmpl_str'] if cfg['tmpl_on'] else "%(title)s.%(ext)s"
 
-        if 'browser' in cfg:
-            self.c_browser.set(cfg['browser'])
-
-        cmd = self.get_cmd_base(cfg["proxy_on"], cfg["proxy_ip"], cfg["proxy_port"], cfg["cookie"])
+        cmd = self.get_cmd_base(cfg["proxy_on"], cfg["proxy_ip"], cfg["proxy_port"], cfg["cookie"], cfg.get("browser", "chrome"))
         cmd.extend([
             "--continue", "--no-part", "-N", "8",
             "-P", cfg["dir"], "-o", f"{output_template}",
@@ -311,7 +325,25 @@ class DownloadMixin:
         cmd.append("--yes-playlist" if cfg["playlist"] else "--no-playlist")
         cmd.append(cfg["url"])
 
-        return self.execute_download_with_progress(cmd, cfg, meta, session_id)
+        ok = self.execute_download_with_progress(cmd, cfg, meta, session_id)
+
+        # Fallback: if format error and we used a complex format, retry with "best"
+        if not ok and any("-f" in c for c in cmd):
+            self.log("格式不可用，尝试 best 回退...", "working")
+            fallback_cmd = []
+            skip_next = False
+            for c in cmd:
+                if skip_next:
+                    skip_next = False
+                    continue
+                if c == "-f":
+                    fallback_cmd.extend(["-f", "best"])
+                    skip_next = True
+                else:
+                    fallback_cmd.append(c)
+            ok = self.execute_download_with_progress(fallback_cmd, cfg, meta, session_id)
+
+        return ok
 
     def process_chat_filtering(self, json_file, filters):
         try:
@@ -483,6 +515,17 @@ class DownloadMixin:
                     fs = meta.get('filesize', 0) or meta.get('filesize_approx', 0)
                 self.db.add_record(meta, fs, time.time() - st)
             self.db.complete_resume_session(session_id)
+            self._cleanup_temp_cookie()
             return True
         else:
+            self._cleanup_temp_cookie()
             return False
+
+    def _cleanup_temp_cookie(self):
+        tc = getattr(self, '_temp_cookie', None)
+        if tc:
+            try:
+                os.remove(tc)
+            except Exception:
+                pass
+            self._temp_cookie = None

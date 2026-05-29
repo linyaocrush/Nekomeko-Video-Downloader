@@ -5,8 +5,10 @@ import customtkinter as ctk
 # ── Subprocess flags for hiding console windows on Windows ──────
 SUBPROCESS_FLAGS = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
 
-# ── Directory paths ──────────────────────────────────────────────
-DATA_DIR = "data"
+# ── Directory paths (absolute, based on project root) ──────────
+_PKG_DIR = os.path.dirname(os.path.abspath(__file__))       # neko/core/
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(_PKG_DIR))   # repo root
+DATA_DIR = os.path.join(_PROJECT_ROOT, "data")
 THEMES_DIR = os.path.join(DATA_DIR, "themes")
 COOKIES_DIR = os.path.join(DATA_DIR, "cookies")
 
