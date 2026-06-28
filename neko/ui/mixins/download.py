@@ -20,10 +20,21 @@ logger = logging.getLogger(__name__)
 class DownloadMixin:
     """yt-dlp command building, metadata analysis, and download execution."""
 
-    def get_cmd_base(self, pon, pip, ppt, ck, browser="chrome"):
+    # Fallback YouTube extractor clients to try when the default fails
+    FALLBACK_CLIENTS = [
+        "youtube:player_client=android",
+        "youtube:player_client=ios",
+        "youtube:player_client=web",
+    ]
+
+    def get_cmd_base(self, pon, pip, ppt, ck, browser="chrome", extractor_args=None):
         exe = self.cfg.get('ytdlp_path', '') or "yt-dlp"
-        cmd = [exe, "--no-warnings", "--ignore-errors", "--encoding", "utf-8",
-               "--extractor-args", "youtube:player_client=web,android"]
+        cmd = [exe, "--no-warnings", "--ignore-errors", "--encoding", "utf-8"]
+        # Use caller-specified client, or default to web+android
+        if extractor_args:
+            cmd.extend(["--extractor-args", extractor_args])
+        else:
+            cmd.extend(["--extractor-args", "youtube:player_client=web,android"])
         if not shutil.which("ffmpeg") and self.cfg.get('ffmpeg_path'):
             cmd.extend(["--ffmpeg-location", self.cfg['ffmpeg_path']])
         if pon and pip and ppt:
@@ -70,6 +81,17 @@ class DownloadMixin:
         cmd = self.get_cmd_base(c["pon"], c["pip"], c["ppt"], c["ck"], c["browser"])
 
         res = run_text(cmd + ["--dump-json", url])
+
+        # Fallback: if default client fails with sign-in/bot, try android/ios/web
+        if res.returncode != 0:
+            err = (res.stderr or "").strip().lower()
+            if any(x in err for x in ["sign in", "bot", "login"]):
+                for fc in self.FALLBACK_CLIENTS:
+                    self.log(f"  → 尝试 {fc.split('=')[-1]} 提取模式...", "working")
+                    cmd = self.get_cmd_base(c["pon"], c["pip"], c["ppt"], c["ck"], c["browser"], extractor_args=fc)
+                    res = run_text(cmd + ["--dump-json", url])
+                    if res.returncode == 0:
+                        break
 
         if res.returncode != 0:
             stderr_hint = (res.stderr or "").strip()
@@ -327,7 +349,7 @@ class DownloadMixin:
 
         ok = self.execute_download_with_progress(cmd, cfg, meta, session_id)
 
-        # Fallback: if format error and we used a complex format, retry with "best"
+        # Fallback 1: if format error and we used a complex format, retry with "best"
         if not ok and any("-f" in c for c in cmd):
             self.log("格式不可用，尝试 best 回退...", "working")
             fallback_cmd = []
@@ -342,6 +364,28 @@ class DownloadMixin:
                 else:
                     fallback_cmd.append(c)
             ok = self.execute_download_with_progress(fallback_cmd, cfg, meta, session_id)
+
+        # Fallback 2: try different YouTube extractor clients (android/ios/web)
+        if not ok:
+            output_template = cfg['tmpl_str'] if cfg['tmpl_on'] else "%(title)s.%(ext)s"
+            for fc in self.FALLBACK_CLIENTS:
+                self.log(f"  → 尝试 {fc.split('=')[-1]} 提取模式下载...", "working")
+                retry_cmd = self.get_cmd_base(
+                    cfg["proxy_on"], cfg["proxy_ip"], cfg["proxy_port"],
+                    cfg["cookie"], cfg.get("browser", "chrome"),
+                    extractor_args=fc,
+                )
+                retry_cmd.extend([
+                    "--continue", "--no-part", "-N", "8",
+                    "-P", cfg["dir"], "-o", output_template,
+                    "--windows-filenames", "--no-mtime", "--newline",
+                    "-f", "best",
+                ])
+                retry_cmd.append("--yes-playlist" if cfg["playlist"] else "--no-playlist")
+                retry_cmd.append(cfg["url"])
+                ok = self.execute_download_with_progress(retry_cmd, cfg, meta, session_id)
+                if ok:
+                    return True
 
         return ok
 
